@@ -1,0 +1,51 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: harbor-scanner-anchore
+  labels:
+    app: harbor-scanner-anchore
+spec:
+  selector:
+    matchLabels:
+      app: harbor-scanner-anchore
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: harbor-scanner-anchore
+    spec:
+      containers:
+        - name: adapter
+          image: anchore/harbor-scanner-adapter:dev
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: "SCANNER_ADAPTER_LISTEN_ADDR"
+              value: ":8080"
+            - name: "ANCHORE_AUTHFILE_PATH"
+              value: "/config/anchore-config"
+              #- name: "SCANNER_ADAPTER_APIKEY"
+              #value: "apikey123"
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - mountPath: /config
+              name: anchore-config
+              readOnly: true
+      volumes:
+        - name: anchore-config
+          secret:
+            secretName: harbor-scanner-anchore-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: harbor-scanner-anchore
+spec:
+  selector:
+    app: harbor-scanner-anchore
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080

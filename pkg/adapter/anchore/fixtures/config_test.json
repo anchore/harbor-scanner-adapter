@@ -1,0 +1,7 @@
+{
+  "endpoint": "https://someserver.somewhere:8228",
+  "username": "habortester",
+  "password": "harbortesterpasser",
+  "pollingIntervalSeconds": 10,
+  "timeoutSeconds": 30
+}
