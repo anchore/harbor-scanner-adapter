@@ -107,7 +107,9 @@ Install Harbor:
 helm install --name harbor harbor/harbor
 ```
 
-Install anchore:
+Install Anchore Engine or Enterprise (Engine as example):
+
+**NOTE: this adapter requires Anchore Engine v0.5.1 or newer**
 
 ```
 helm install --name anchore stable/anchore-engine
