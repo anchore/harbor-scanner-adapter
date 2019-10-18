@@ -61,7 +61,9 @@ Adapter configuration values. These cannot be set in the client config file, onl
 | --------|-------------|---------------|
 | SCANNER_ADAPTER_LISTEN_ADDR | The address for the scanner to listen on for API calls | ":8080" |
 | SCANNER_ADAPTER_APIKEY | A key value to enable authentication for the adapter API. If set, callers must provide this value as a bearer token in the Authorization header | 7d341116-99e4-4c9b-bd81-87cd4117e713 |
-
+| SCANNER_ADAPTER_FULL_VULN_DESCRIPTIONS | Bool to toggle off full descriptions for better performance | "false"|
+| SCANNER_ADAPTER_LOG_LEVEL | Log level for adapter | "info" |
+| SCANNER_ADAPTER_LOG_FORMAT | Log format, defaults to "text" unless "json" is specified | "json"
 
 Anchore client configuration (also available via a json file as below):
 
