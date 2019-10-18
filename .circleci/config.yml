@@ -1,0 +1,48 @@
+# CircleCI Configuration File
+---
+version: 2.1
+jobs:
+  unit_test:
+    description: Run tests for formatting
+    docker:
+      - image: circleci/golang:1
+    steps:
+      - checkout
+      - run:
+          name: Run GO FMT on repo
+          command: (( $(go fmt ./... | wc -c) == "0" ))
+      - run:
+          name: Unit tests with Go
+          command: make test
+  build:
+    docker:
+      - image: circleci/golang:1
+    steps:
+      - checkout
+      - run:
+          name: Build container
+          command: make container
+  push_dev_image:
+    docker:
+      - image: circleci/golang:1
+    steps:
+      - checkout
+      - run:
+          name: Env Check
+          command: '[ -n $DEV_DH_REPO ] && [ -n $DEV_TAG ]'
+      - run:
+          name: Build image
+          command: make container
+      - run:
+          name: Tag Image
+          command: docker tag localbuild:latest $DEV_DH_REPO:$DEV_TAG
+      - run:
+          name: Push Image
+          command: docker push $DEV_DH_REPO:$DEV_TAG"
+workflows:
+  default:
+    jobs:
+      - unit_test
+      - build:
+          requires:
+            - unit_test

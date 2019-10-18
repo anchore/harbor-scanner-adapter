@@ -91,7 +91,7 @@ func (h *APIHandler) GetScanReport(res http.ResponseWriter, req *http.Request) {
 		requestedType = requestedTypes[0]
 	}
 
-	log.Info("Requested report %v", requestedType)
+	log.WithField("mime_type", requestedType).Info("Requested report")
 
 	switch requestedType {
 	case adapter.HarborVulnReportv1MimeType:
