@@ -5,7 +5,7 @@ import (
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore"
 	api "github.com/anchore/harbor-scanner-adapter/pkg/http/api/v1"
 	"github.com/gorilla/mux"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -13,21 +13,27 @@ func main() {
 	// Load the adapter configuration, separate from the client config
 	adapterConfig, err := adapter.GetConfig()
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		log.WithField("err", err).Fatalf("no configuration found")
 	}
 
-	log.Printf("Starting harbor-scanner-anchore")
+	if adapterConfig.LogFormat == "json" {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
+
+	log.SetLevel(adapterConfig.LogLevel)
+
+	log.Info("Starting harbor-scanner-anchore")
 
 	// Load the client configuration, which contains credentials for anchore api, so treated as a secret
 	anchoreClientConfig, err := anchore.GetConfig()
 	if err != nil {
-		log.Fatalf("Error loading anchore client configuration: %v", err)
+		log.WithField("err", err).Fatalf("error loading anchore client configuration")
 	}
 
 	// Start the API service
 	scanner, err := anchore.NewScanner(anchoreClientConfig)
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		log.WithField("err", err).Fatalf("error instantiating scanner with configuration")
 	}
 
 	apiHandler := api.NewAPIHandler(scanner, adapterConfig)
@@ -42,9 +48,9 @@ func main() {
 	v1Router.Methods("POST").Path("/scan").HandlerFunc(apiHandler.CreateScan)
 	v1Router.Methods("GET").Path("/scan/{scanId}/report").HandlerFunc(apiHandler.GetScanReport)
 
-	log.Printf("Listening on address: %s", adapterConfig.ListenAddr)
+	log.WithField("address", adapterConfig.ListenAddr).Info("listening for connections")
 	err = http.ListenAndServe(adapterConfig.ListenAddr, router)
 	if err != nil && err != http.ErrServerClosed {
-		log.Fatalf("Error: %v", err)
+		log.WithField("err", err).Fatalf("error in server listener")
 	}
 }

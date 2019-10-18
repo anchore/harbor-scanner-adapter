@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
 	"strings"
@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	DescriptionFormatString = "Vendor-specific CVSS v3/v2 Scores: %.1f/%.1f. NVD CVSS v3/v2 Scores: %.1f/%.1f (Score of -1.0 means data unavailable). For more detail see link: %v"
+	DescriptionFormatString = "Description unavailable. \nVendor-specific CVSS v3/v2 Scores: %.1f/%.1f. \nNVD CVSS v3/v2 Scores: %.1f/%.1f (Score of -1.0 means data unavailable).\nFor more detail see link: %v"
 )
 
 type imageScanner struct {
@@ -228,7 +228,8 @@ func (s *imageScanner) Scan(req harbor.ScanRequest) (harbor.ScanResponse, error)
 }
 
 // update method and parameter passed in
-func (s *imageScanner) GetHarborVulnerabilityReport(scanId string) (harbor.VulnerabilityReport, error) {
+func (s *imageScanner) GetHarborVulnerabilityReport(scanId string, includeDescriptions bool) (harbor.VulnerabilityReport, error) {
+
 	log.Println("scanId: ", scanId)
 	if scanId == "" {
 		return harbor.VulnerabilityReport{}, errors.New("no ScanId")
@@ -243,38 +244,56 @@ func (s *imageScanner) GetHarborVulnerabilityReport(scanId string) (harbor.Vulne
 	if err != nil {
 		return harbor.VulnerabilityReport{}, err
 	}
-	return s.ToHarborScanResult(repository, anchoreVulnResponse)
+	vulnDescriptionMap := make(map[string]string)
+
+	if includeDescriptions {
+		// Get vulnerability id/group mappings for getting additional metadata
+		// remove duplicates where vuln can have multiple matches
+		uniqVulnIdNamespacePairs := make(map[VulnNamespaceDescription]bool)
+		for _, v := range anchoreVulnResponse.Vulnerabilities {
+			uniqVulnIdNamespacePairs[VulnNamespaceDescription{
+				id:        v.VulnerabilityID,
+				namespace: v.FeedGroup,
+				description: "",
+			}] = true
+		}
+
+		// Convert the map into an array for downstream
+		vulns := make([]VulnNamespaceDescription, len(uniqVulnIdNamespacePairs))
+		i := 0
+		for v := range uniqVulnIdNamespacePairs {
+			vulns[i] = v
+			i++
+		}
+
+		// Add the descriptions in
+		start := time.Now()
+		err = GetVulnerabilityDescriptions(s.ClientConfiguration, &vulns)
+		if err != nil {
+			//Return without desc
+			log.Printf("could not get vulnerability metadata for populating descriptions due to error %v", err)
+		}
+
+		log.Debugf("description list %v", vulns)
+
+
+		// Pivot to a map for next call
+		for _, desc := range vulns {
+			vulnDescriptionMap[desc.id] = desc.description
+		}
+		log.Debugf("description map %v", vulnDescriptionMap)
+
+		descriptionTime := time.Now().Sub(start)
+		log.WithFields(log.Fields{"duration": descriptionTime}).Debug("time to get descriptions")
+	} else {
+		log.Debug("Skipping vuln description merge, as dictated by configuration")
+	}
+
+	return s.ToHarborScanResult(repository, anchoreVulnResponse, vulnDescriptionMap)
 }
 
 func (s *imageScanner) GetAnchoreVulnReport(digest string) (anchore.ScanResult, error) {
-	log.Println("Retrieving scan result for digest ", digest)
-
-	var ScanResultdata anchore.ScanResult
-	var tempscandata anchore.AnchoreImages
-	timeout := time.Duration(s.ClientConfiguration.TimeoutSeconds) * time.Second
-
-	request := gorequest.New().SetBasicAuth(s.ClientConfiguration.Username, s.ClientConfiguration.Password)
-
-	// call API get the full report until "analysis_status" = "analyzed"
-	resp, _, errs := request.Get(s.ClientConfiguration.Endpoint + "/v1/images/" + digest).Timeout(timeout).EndStruct(&tempscandata)
-	checkStatusStruct(resp, errs)
-
-	switch tempscandata[0].AnalysisStatus {
-	case "analysis_failed":
-		//to do: define return result once it failed
-		log.Println("analysis_status = analysis_failed")
-		return anchore.ScanResult{}, fmt.Errorf("scan failed")
-	case "analyzed":
-		anchoreUrl := fmt.Sprintf("%v/v1/images/%v/vuln/all?vendor_only=%v", s.ClientConfiguration.Endpoint, digest, s.ClientConfiguration.FilterVendorIgnoredVulns)
-		log.Println("checking vulns for image at: ", anchoreUrl)
-		resp, _, errs = request.Get(anchoreUrl).Timeout(60 * time.Second).EndStruct(&ScanResultdata)
-		checkStatusStruct(resp, errs)
-		return ScanResultdata, nil
-	default:
-		//Includes the "not_analyzed" state
-		log.Println("Anchore analysis not complete return empty")
-		return anchore.ScanResult{}, fmt.Errorf("analysis pending")
-	}
+	return GetImageVulnerabilities(s.ClientConfiguration, digest, s.ClientConfiguration.FilterVendorIgnoredVulns)
 }
 
 // update method and parameter passed in
@@ -322,17 +341,27 @@ func ToHarborDescription(anchoreVuln *anchore.Vulnerability) (string, error) {
 	return fmt.Sprintf(DescriptionFormatString, vendorCVSSv3, vendorCVSSv2, CVSSv3, CVSSv2, anchoreVuln.URL), nil
 }
 
-func (s *imageScanner) ToHarborScanResult(repo string, srs anchore.ScanResult) (harbor.VulnerabilityReport, error) {
+func (s *imageScanner) ToHarborScanResult(repo string, srs anchore.ScanResult, vulnDescriptions map[string]string) (harbor.VulnerabilityReport, error) {
 	var vulnerabilities = make([]harbor.VulnerableItem, len(srs.Vulnerabilities))
 	var maxSev = harbor.SevNone
 	var sev harbor.Severity
-
+	var err error
+	//
 	for i, v := range srs.Vulnerabilities {
 		sev = harbor.ToHarborSeverity(v.Severity)
-		desc, err := ToHarborDescription(&v)
-		if err != nil {
-			desc = "unavailable. see link"
+		description, ok := vulnDescriptions[v.VulnerabilityID]
+
+		if ! ok || description == "" {
+			description, err = ToHarborDescription(&v)
+			if err != nil {
+				log.Printf("could not format harbor description from vuln cvss data %v", err)
+			}
 		}
+
+		if description == "" {
+			description = "unavailable. see link"
+		}
+
 
 		vulnerabilities[i] = harbor.VulnerableItem{
 			ID:          v.VulnerabilityID,
@@ -341,7 +370,7 @@ func (s *imageScanner) ToHarborScanResult(repo string, srs anchore.ScanResult) (
 			Version:     v.InstalledVersion,
 			Links:       []string{v.URL},
 			Fixed:       v.Fix,
-			Description: desc,
+			Description: description,
 		}
 
 		if vulnerabilities[i].Fixed == "None" {
@@ -362,15 +391,17 @@ func (s *imageScanner) ToHarborScanResult(repo string, srs anchore.ScanResult) (
 		},
 		Scanner:         adapter.AdapterMetadata.Scanner,
 		Severity:        maxSev,
-		Vulnerabilities: vulnerabilities, //Vuln listing
+		Vulnerabilities: vulnerabilities, //VulnNamespace listing
 	}, nil
 }
 
 func checkStatusStruct(resp gorequest.Response, errs []error) {
 	if errs != nil {
-		log.Println("Http Error code : " + resp.Status)
-		log.Println("Error message : ")
-		log.Println(errs)
+		if resp != nil {
+			log.WithFields(log.Fields{"status": resp.Status, "statusCode": resp.StatusCode, "errs": errs}).Error("error response from anchore")
+		} else {
+			log.WithFields(log.Fields{"resp": "nil", "errs": errs}).Error("error response from anchore")
+		}
 	}
 }
 

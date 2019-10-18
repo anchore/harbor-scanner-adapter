@@ -89,3 +89,17 @@ type AnchoreError struct {
 	HttpCode int                    `json:"httpcode"`
 	Message  string                 `json:"message"`
 }
+
+type NamespacedVulnerability struct {
+	ID string `json:"id"`
+	Namespace string `json:"namespace"`
+	Description string `json:"description"`
+	// Omits other fields for now, since they are unused
+}
+
+type VulnerabilityQueryResults struct {
+	Page string `json:"page"`
+	NextPage string `json:"next_page"`
+	ReturnedCount int `json:"returned_count"`
+	Vulnerabilities []NamespacedVulnerability `json:"vulnerabilities"`
+}

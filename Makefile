@@ -13,3 +13,9 @@ container: build
 
 test:
 	GOOS=linux GO111MODULE=on CGO_ENABLED=0 go test ./...
+
+clean:
+	rm bin/$(BINARY)
+
+container-clean:
+	docker rmi $(IMAGE)
