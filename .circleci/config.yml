@@ -19,6 +19,8 @@ jobs:
       - image: circleci/golang:1
     steps:
       - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
           name: Build container
           command: make container
@@ -27,6 +29,8 @@ jobs:
       - image: circleci/golang:1
     steps:
       - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
           name: Env Check
           command: '[ -n $DEV_DH_REPO ] && [ -n $DEV_TAG ]'

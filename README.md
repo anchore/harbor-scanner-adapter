@@ -1,3 +1,6 @@
+[![CI][ci-img]][ci]
+[![Go Reportcard][report-card-img]][report-card]
+
 # Harbor Scanner Adapter for Anchore Engine/Enterprise
 
 ## Overview
@@ -174,4 +177,7 @@ Special thanks to the following for their help with the prototype adapter implem
 * [cafeliker](https://github.com/cafeliker)
 * [MaGaoJU](http://github.com/MaGaoJu)
 
-
+[ci]: https://circleci.com/gh/anchore/harbor-scanner-adapter/tree/master
+[ci-img]: https://circleci.com/gh/anchore/harbor-scanner-adapter/tree/master.svg
+[report-card]: https://goreportcard.com/report/github.com/anchore/harbor-scanner-adapter
+[report-card-img]: https://goreportcard.com/badge/github.com/anchore/harbor-scanner-adapter
