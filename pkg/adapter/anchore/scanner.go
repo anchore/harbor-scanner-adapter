@@ -252,8 +252,8 @@ func (s *imageScanner) GetHarborVulnerabilityReport(scanId string, includeDescri
 		uniqVulnIdNamespacePairs := make(map[VulnNamespaceDescription]bool)
 		for _, v := range anchoreVulnResponse.Vulnerabilities {
 			uniqVulnIdNamespacePairs[VulnNamespaceDescription{
-				id:        v.VulnerabilityID,
-				namespace: v.FeedGroup,
+				id:          v.VulnerabilityID,
+				namespace:   v.FeedGroup,
 				description: "",
 			}] = true
 		}
@@ -275,7 +275,6 @@ func (s *imageScanner) GetHarborVulnerabilityReport(scanId string, includeDescri
 		}
 
 		log.Debugf("description list %v", vulns)
-
 
 		// Pivot to a map for next call
 		for _, desc := range vulns {
@@ -351,7 +350,7 @@ func (s *imageScanner) ToHarborScanResult(repo string, srs anchore.ScanResult, v
 		sev = harbor.ToHarborSeverity(v.Severity)
 		description, ok := vulnDescriptions[v.VulnerabilityID]
 
-		if ! ok || description == "" {
+		if !ok || description == "" {
 			description, err = ToHarborDescription(&v)
 			if err != nil {
 				log.Printf("could not format harbor description from vuln cvss data %v", err)
@@ -361,7 +360,6 @@ func (s *imageScanner) ToHarborScanResult(repo string, srs anchore.ScanResult, v
 		if description == "" {
 			description = "unavailable. see link"
 		}
-
 
 		vulnerabilities[i] = harbor.VulnerableItem{
 			ID:          v.VulnerabilityID,

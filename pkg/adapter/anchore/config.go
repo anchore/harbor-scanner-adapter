@@ -7,8 +7,8 @@ package anchore
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"

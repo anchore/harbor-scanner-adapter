@@ -1,7 +1,7 @@
 package anchore
 
 import (
-//	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
+	//	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
 	"sort"
 	"testing"
 )

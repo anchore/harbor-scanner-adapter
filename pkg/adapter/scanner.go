@@ -25,14 +25,13 @@ const (
 	DefaultLogLevel               = log.WarnLevel
 	ScanRequestMimeType           = "application/vnd.scanner.adapter.scan.request+json; version=1.0"
 	ScanResponseMimeType          = "application/vnd.scanner.adapter.scan.response+json; version=1.0"
-    ErrorResponseMimeType         = "application/vnd.scanner.adapter.error+json; version=1.0"
+	ErrorResponseMimeType         = "application/vnd.scanner.adapter.error+json; version=1.0"
 	ListenAddrEnvVar              = "SCANNER_ADAPTER_LISTEN_ADDR"
 	LogLevelEnvVar                = "SCANNER_ADAPTER_LOG_LEVEL"
 	LogFormatEnvVar               = "SCANNER_ADAPTER_LOG_FORMAT"
 	ApiKeyEnvVar                  = "SCANNER_ADAPTER_APIKEY"
 	FullVulnDescriptionsEnvVar    = "SCANNER_ADAPTER_FULL_VULN_DESCRIPTIONS"
 )
-
 
 var AdapterMetadata = harbor.ScannerAdapterMetadata{
 	Scanner: harbor.Scanner{
@@ -59,10 +58,10 @@ var AdapterMetadata = harbor.ScannerAdapterMetadata{
 }
 
 type ServiceConfig struct {
-	ListenAddr string // Address to listen on, e.g ":8080" or "127.0.0.1:80"
-	ApiKey     string // Key for auth, used as a Bearer token
-	LogFormat  string
-	LogLevel   log.Level
+	ListenAddr                    string // Address to listen on, e.g ":8080" or "127.0.0.1:80"
+	ApiKey                        string // Key for auth, used as a Bearer token
+	LogFormat                     string
+	LogLevel                      log.Level
 	FullVulnerabilityDescriptions bool //If true, the scanner adapter will query anchore to get vuln descriptions, else will use cvss string and defer to the link url
 }
 
@@ -130,7 +129,6 @@ func GetConfig() (ServiceConfig, error) {
 		log.Printf("No full vulnerability description value found in env, defaulting to 'true'")
 		cfg.FullVulnerabilityDescriptions = true
 	}
-
 
 	return cfg, nil
 }

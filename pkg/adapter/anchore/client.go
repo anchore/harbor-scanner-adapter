@@ -13,16 +13,15 @@ import (
 )
 
 const (
-	CHUNKSIZE = 100
+	CHUNKSIZE    = 100
 	NVDFEEDGROUP = "nvdv2:cves"
 )
 
 type VulnNamespaceDescription struct {
-	id string
-	namespace string
+	id          string
+	namespace   string
 	description string
 }
-
 
 // Updates the description fields in the input array of description objects
 func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]VulnNamespaceDescription) error {
@@ -38,7 +37,7 @@ func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]Vu
 	// Used chunked fetch to get full listing, adding in the nvdv2 namespace for extra coverage
 	count := len(*vulns)
 
-	for i := 0; i < count / CHUNKSIZE + 1; i++ {
+	for i := 0; i < count/CHUNKSIZE+1; i++ {
 		start, end := getVulnProcessingChunks(count, i, CHUNKSIZE)
 
 		vulnIds := make([]string, end-start)
@@ -66,7 +65,7 @@ func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]Vu
 		//Then query the system for a single namespace and populate the result fields
 		qryResults, errs := QueryVulnerabilityRecords(clientConfiguration, vulnIds, namespaceNames)
 		if errs != nil {
-			log.Debugf("error getting vuln records ", errs)
+			log.WithField("errs", errs).Debug("error getting vuln records")
 			return errs[0]
 
 		}
@@ -84,7 +83,7 @@ func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]Vu
 		if found, ok := vulnDescriptionMap[result.ID]; ok {
 			found[result.Namespace] = result.Description
 		} else {
-			vulnDescriptionMap[result.ID] = map[string]string {
+			vulnDescriptionMap[result.ID] = map[string]string{
 				result.Namespace: result.Description,
 			}
 		}
@@ -101,7 +100,7 @@ func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]Vu
 		foundDescription = ""
 
 		// update each with rules
-		if rec, ok := vulnDescriptionMap[vulnRecord.id]; ! ok {
+		if rec, ok := vulnDescriptionMap[vulnRecord.id]; !ok {
 			log.WithFields(log.Fields{"id": vulnRecord.id, "namespace": vulnRecord.namespace}).Debug("warning: could not find vuln record in anchore api results for querying vuln descriptions")
 			continue
 		} else {
@@ -137,7 +136,7 @@ func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]Vu
 }
 
 // Simple query that handles pagination and returns the results
-func QueryVulnerabilityRecords(clientConfiguration *ClientConfig, ids []string, namespaces []string) (anchore.VulnerabilityQueryResults, []error){
+func QueryVulnerabilityRecords(clientConfiguration *ClientConfig, ids []string, namespaces []string) (anchore.VulnerabilityQueryResults, []error) {
 	var page string
 	var vulnListing anchore.VulnerabilityQueryResults
 	var vulnPage anchore.VulnerabilityQueryResults
@@ -208,8 +207,8 @@ func QueryVulnerabilityRecords(clientConfiguration *ClientConfig, ids []string, 
 func getVulnProcessingChunks(itemCount, chunkToGet, chunkSize int) (int, int) {
 	last := itemCount
 	cs := float64(chunkSize)
-	if chunkToGet * chunkSize < itemCount {
-		return chunkToGet * chunkSize, int(math.Min(float64(chunkToGet + 1) * cs, float64(last)))
+	if chunkToGet*chunkSize < itemCount {
+		return chunkToGet * chunkSize, int(math.Min(float64(chunkToGet+1)*cs, float64(last)))
 	} else {
 		// Out of range
 		return -1, -1
@@ -251,4 +250,3 @@ func GetImageVulnerabilities(clientConfiguration *ClientConfig, digest string, f
 		return anchore.ScanResult{}, fmt.Errorf("analysis pending")
 	}
 }
-
