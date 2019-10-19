@@ -50,6 +50,7 @@ workflows:
       - push_dev_image:
           requires:
             - build
-          filter:
+          filters:
             branches:
-              - master
+              only:
+                - master
