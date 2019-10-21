@@ -22,7 +22,7 @@ const (
 	AdapterVersion                = "1.0.0-alpha"
 	AdapterVendor                 = "Anchore Inc."
 	AdapterName                   = "Anchore"
-	DefaultLogLevel               = log.WarnLevel
+	DefaultLogLevel               = log.InfoLevel
 	ScanRequestMimeType           = "application/vnd.scanner.adapter.scan.request+json; version=1.0"
 	ScanResponseMimeType          = "application/vnd.scanner.adapter.scan.response+json; version=1.0"
 	ErrorResponseMimeType         = "application/vnd.scanner.adapter.error+json; version=1.0"
@@ -102,9 +102,9 @@ func GetConfig() (ServiceConfig, error) {
 	}
 
 	if cfg.ApiKey, ok = os.LookupEnv(ApiKeyEnvVar); ok {
-		log.Printf("Detected api key in configuration")
+		log.Info("Detected api key in configuration")
 	} else {
-		log.Printf("No api key detected in configuration")
+		log.Info("No api key detected in configuration")
 	}
 
 	cfg.LogFormat = ""
@@ -123,10 +123,10 @@ func GetConfig() (ServiceConfig, error) {
 
 	var useVulnDescription string
 	if useVulnDescription, ok = os.LookupEnv(FullVulnDescriptionsEnvVar); ok {
-		log.Printf("Full vuln description value detected in configuration")
+		log.Info("Full vuln description value detected in configuration")
 		cfg.FullVulnerabilityDescriptions = "false" != strings.ToLower(useVulnDescription)
 	} else {
-		log.Printf("No full vulnerability description value found in env, defaulting to 'true'")
+		log.Info("No full vulnerability description value found in env, defaulting to 'true'")
 		cfg.FullVulnerabilityDescriptions = true
 	}
 

@@ -134,6 +134,9 @@ type Capability struct {
 
 // Error holds the information about an error, including metadata about its JSON structure.
 type Error struct {
-	HTTPCode int    `json:"-"`
-	Message  string `json:"message"`
+	Message string `json:"message"`
+}
+
+type ErrorResponse struct {
+	Error Error `json:"error"`
 }

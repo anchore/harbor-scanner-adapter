@@ -1,4 +1,4 @@
-package anchore
+package client
 
 import (
 	"log"

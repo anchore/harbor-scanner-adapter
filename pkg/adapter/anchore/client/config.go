@@ -2,7 +2,7 @@
 Configuration types and loaders for the Anchore client
 */
 
-package anchore
+package client
 
 import (
 	"encoding/json"

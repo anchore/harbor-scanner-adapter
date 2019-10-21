@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter"
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore"
+	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/client"
 	api "github.com/anchore/harbor-scanner-adapter/pkg/http/api/v1"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -21,11 +22,11 @@ func main() {
 	}
 
 	log.SetLevel(adapterConfig.LogLevel)
-
+	log.Info("Log level ", log.GetLevel())
 	log.Info("Starting harbor-scanner-anchore")
 
 	// Load the client configuration, which contains credentials for anchore api, so treated as a secret
-	anchoreClientConfig, err := anchore.GetConfig()
+	anchoreClientConfig, err := client.GetConfig()
 	if err != nil {
 		log.WithField("err", err).Fatalf("error loading anchore client configuration")
 	}
@@ -42,6 +43,7 @@ func main() {
 
 	// Adds the authz middleware to process Bearer tokens if this is configured with an apikey
 	v1Router.Use(apiHandler.AuthenticationMiddleware)
+	v1Router.Use(apiHandler.LoggerMiddleware)
 
 	// Simple routes defined by the Harbor adapter API spec
 	v1Router.Methods("GET").Path("/metadata").HandlerFunc(apiHandler.GetMetadata)
