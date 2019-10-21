@@ -36,7 +36,7 @@ jobs:
           command: make container
       - run:
           name: Login
-          command: echo $DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+          command: echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
       - run:
           name: Push image
           command: make push
