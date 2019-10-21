@@ -25,11 +25,9 @@ jobs:
           name: Build container
           command: make container
   push_dev_image:
+    context: dockerhub
     docker:
       - image: circleci/golang:1
-        auth:
-          username: $DOCKER_USER
-          password: $DOCKER_PASS
     steps:
       - checkout
       - setup_remote_docker:
@@ -37,6 +35,9 @@ jobs:
       - run:
           name: Build image
           command: make container
+      - run:
+          name: Login
+          command: echo $DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
       - run:
           name: Push image
           command: make push
