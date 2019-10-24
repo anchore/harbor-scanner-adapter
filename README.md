@@ -143,17 +143,18 @@ anchore-cli account user add --account harbor harbor harboruserpass123
 
 Install the adapter:
 
+If you created a custom user:
 ```
-cat > anchore-config.json << EOF
-{
-  "endpoint": "http://anchore-anchore-engine-api.default.svc.cluster.local:8228",
-  "username": "harbor",
-  "password': "harboruserpass123",
-  "timeoutSeconds": 10
-} 
-EOF
+kubectl create secret generic anchore-creds --from-literal=username=harbor --from-literal=password=harboruserpass123
+```
 
-kubectl create secret generic --name anchore-adapter-config --from-file=anchore-config=anchore-config.json
+To use the default admin user/pass for a fresh test/dev install of anchore (DO NOT DO THIS FOR PRODUCTION!):
+```
+kubectl create secret generic anchore-creds --from-literal=username=admin --from-literal=password=foobar
+```
+
+Install the adapter:
+```
 kubectl apply -f ./k8s/harbor-adapter-anchore.yaml
 ```
 
