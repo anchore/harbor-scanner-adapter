@@ -1,4 +1,17 @@
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: anchore-creds
+  labels:
+    app: harbor-scanner-anchore
+data:
+  # Use different username/password for production use. The adapter should *never* use admin credentials in production
+  # admin
+  username: YWRtaW4=
+  # foobar
+  password: Zm9vYmFy
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,22 +33,42 @@ spec:
           image: anchore/harbor-scanner-adapter:dev
           imagePullPolicy: IfNotPresent
           env:
-            - name: "SCANNER_ADAPTER_LISTEN_ADDR"
+            - name: SCANNER_ADAPTER_LISTEN_ADDR
               value: ":8080"
-            - name: "ANCHORE_AUTHFILE_PATH"
-              value: "/config/anchore-config"
+            - name: ANCHORE_ENDPOINT
+              value: "http://anchore-anchore-engine-api:8228"
+            - name: ANCHORE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: anchore-creds
+                  key: username
+            - name: ANCHORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: anchore-creds
+                  key: password
+            - name: ANCHORE_CLIENT_TIMEOUT_SECONDS
+              value: "10"
+            - name: ANCHORE_FILTER_VENDOR_IGNORED
+              value: "true"
+            - name: SCANNER_ADAPTER_LOG_LEVEL
+              value: "debug"
+# Uncomment this to use a volume to mount a config as a secret
+              #- name: "ANCHORE_AUTHFILE_PATH"
+              #value: "/config/anchore-config"
               #- name: "SCANNER_ADAPTER_APIKEY"
               #value: "apikey123"
           ports:
             - containerPort: 8080
-          volumeMounts:
-            - mountPath: /config
-              name: anchore-config
-              readOnly: true
-      volumes:
-        - name: anchore-config
-          secret:
-            secretName: harbor-scanner-anchore-config
+# Uncomment this to use a volume to mount a config as a secret
+#          volumeMounts:
+#            - mountPath: /config
+#              name: anchore-config
+#              readOnly: true
+#      volumes:
+#        - name: anchore-config
+#          secret:
+#            secretName: harbor-scanner-anchore-config
 ---
 apiVersion: v1
 kind: Service
