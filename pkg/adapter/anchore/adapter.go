@@ -66,14 +66,17 @@ func ScanIdToRegistryDigest(scanId string) (string, string, error) {
 }
 
 func ScanToAnchoreRequest(req harbor.ScanRequest) (*anchore.ImageScanRequest, error) {
-	fakeTag := req.Artifact.Digest[7:] // Map the digest to a tag name for anchore since anchore requires a tag
+	tag := req.Artifact.Digest[7:] // Map the digest to a tag name for anchore since anchore requires a tag
+	if req.Artifact.Tag != "" {
+		tag = req.Artifact.Tag
+	}
 
 	var registryHostPort, err = client.ExtractRegistryFromUrl(req.Registry.URL)
 	if err != nil {
 		return nil, err
 	}
 
-	tagPullString := fmt.Sprintf("%s/%s:%s", registryHostPort, req.Artifact.Repository, fakeTag)
+	tagPullString := fmt.Sprintf("%s/%s:%s", registryHostPort, req.Artifact.Repository, tag)
 	digestPullString := fmt.Sprintf("%s/%s@%s", registryHostPort, req.Artifact.Repository, req.Artifact.Digest)
 
 	var anchoreReq = &anchore.ImageScanRequest{

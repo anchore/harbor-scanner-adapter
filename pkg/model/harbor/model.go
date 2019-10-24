@@ -80,6 +80,7 @@ type Registry struct {
 type Artifact struct {
 	Repository string `json:"repository"`
 	Digest     string `json:"digest"`
+	Tag        string `json:"tag"`
 }
 
 type ScanRequest struct {
