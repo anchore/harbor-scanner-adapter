@@ -305,8 +305,10 @@ func (s *HarborScannerAdapter) GetAnchoreVulnReport(digest string) (anchore.Imag
 			log.Debug("found analyzed image")
 		case "analysis_failed":
 			log.Debug("failed analysis")
+			return anchore.ImageVulnerabilityReport{}, fmt.Errorf("scan failed")
 		default:
 			log.Debug("Pending analysis")
+			return anchore.ImageVulnerabilityReport{}, fmt.Errorf("analysis pending")
 		}
 	}
 
