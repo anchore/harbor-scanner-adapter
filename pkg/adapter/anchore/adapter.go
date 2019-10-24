@@ -313,7 +313,7 @@ func (s *HarborScannerAdapter) GetAnchoreVulnReport(digest string) (anchore.Imag
 	}
 
 	report, err := client.GetImageVulnerabilities(s.ClientConfiguration, digest, s.ClientConfiguration.FilterVendorIgnoredVulns)
-	if err != nil {
+	if err == nil {
 		log.Debug("caching result report")
 		CacheVulnReport(digest, report)
 	}

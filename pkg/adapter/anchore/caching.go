@@ -13,6 +13,8 @@ const (
 	DbUpdateCacheTimeoutSeconds    = 60
 	VulnReportCacheTimeoutSeconds  = 180
 	DescriptionCacheTimeoutSeconds = 60 * 60 * 24
+	VulnDescriptionCacheMaxCount   = 10000
+	VulnReportCacheMaxCount        = 100
 )
 
 type TimestampedEntry struct {
@@ -21,7 +23,7 @@ type TimestampedEntry struct {
 }
 
 // Description cache for storing vuln descriptions, only keep 10k entries
-var vulnDescriptionCache = lru.New(10000)
+var vulnDescriptionCache = lru.New(VulnDescriptionCacheMaxCount)
 var vulnCacheLock = sync.Mutex{}
 
 // Cached db update, subject to ttl
@@ -31,7 +33,7 @@ var dbUpdateCacheLock = sync.Mutex{}
 
 // Cached vuln reports from Anchore backend. Keep a small ttl, mostly used for repeated requests for different mime types (e.g. caller
 // requests the harbor format then the raw format, adapter can cache result between those calls (seconds)
-var vulnReportCache = lru.New(100)
+var vulnReportCache = lru.New(VulnReportCacheMaxCount)
 var vulnReportCacheLock = sync.Mutex{}
 
 // Get a vuln report from the cache. If present ok bool = true, false otherwise
