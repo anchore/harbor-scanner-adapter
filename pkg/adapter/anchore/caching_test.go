@@ -30,7 +30,7 @@ func TestGetCachedDbUpdateTime(t *testing.T) {
 	testT := time.Now()
 	CacheDBUpdate(testT)
 
-	if t2, ok := GetCachedDbUpdateTime(); ! ok {
+	if t2, ok := GetCachedDbUpdateTime(); !ok {
 		t.Fatal("not cached")
 	} else {
 		if t2 != testT {
@@ -44,7 +44,7 @@ func TestFlushDBUpdateCache(t *testing.T) {
 	testT := time.Now()
 	CacheDBUpdate(testT)
 	foundT, ok := GetCachedDbUpdateTime()
-	if ! ok || foundT != testT {
+	if !ok || foundT != testT {
 		t.Fail()
 	}
 	FlushDbUpdateCache()
@@ -53,7 +53,6 @@ func TestFlushDBUpdateCache(t *testing.T) {
 		t.Fail()
 	}
 }
-
 
 // Vuln description cache tests
 func TestGetCachedVulnDescription(t *testing.T) {
@@ -76,7 +75,7 @@ func TestGetCachedVulnDescription(t *testing.T) {
 	}
 
 	r, ok := GetCachedVulnDescription(desc2)
-	if ! ok {
+	if !ok {
 		t.Fatal("not found, should have been found")
 	}
 
@@ -115,7 +114,7 @@ func TestCacheVulnDescriptionTimeout(t *testing.T) {
 
 	CacheVulnDescription(desc1)
 	sleepDuration := time.Second * (VulnReportCacheTimeoutSeconds + 1)
-	t.Log("Sleeping to test ttl: ", VulnReportCacheTimeoutSeconds + 1)
+	t.Log("Sleeping to test ttl: ", VulnReportCacheTimeoutSeconds+1)
 	time.Sleep(sleepDuration)
 
 	_, ok := GetCachedVulnDescription(anchore.NamespacedVulnerability{
@@ -154,7 +153,6 @@ func TestVulnDescriptionCacheSize(t *testing.T) {
 
 }
 
-
 // Vuln report cache tests
 func TestGetCachedVulnReport(t *testing.T) {
 	defer FlushVulnReportCache()
@@ -169,7 +167,7 @@ func TestGetCachedVulnReport(t *testing.T) {
 	}
 
 	r, ok := GetCachedVulnReport("digest123")
-	if ! ok {
+	if !ok {
 		t.Fatal("not found, should have been found")
 	}
 

@@ -19,7 +19,7 @@ const (
 
 type TimestampedEntry struct {
 	CachedAt time.Time
-	Object interface{}
+	Object   interface{}
 }
 
 // Description cache for storing vuln descriptions, only keep 10k entries
@@ -45,12 +45,12 @@ func GetCachedVulnReport(digest string) (anchore.ImageVulnerabilityReport, bool)
 	if ok {
 		age := time.Since(entry.(TimestampedEntry).CachedAt)
 		// Check the time
-		if age > VulnReportCacheTimeoutSeconds * time.Second {
+		if age > VulnReportCacheTimeoutSeconds*time.Second {
 			// expired, remove
-			log.WithFields(log.Fields{"age":age, "digest": digest}).Debug("expired entry")
+			log.WithFields(log.Fields{"age": age, "digest": digest}).Debug("expired entry")
 			vulnReportCache.Remove(digest)
 		} else {
-			log.WithFields(log.Fields{"age":age, "digest": digest}).Debug("cache hit")
+			log.WithFields(log.Fields{"age": age, "digest": digest}).Debug("cache hit")
 			// ok, return
 			return entry.(TimestampedEntry).Object.(anchore.ImageVulnerabilityReport), true
 		}
@@ -101,7 +101,7 @@ func GetCachedVulnDescription(v anchore.NamespacedVulnerability) (string, bool) 
 		if ok {
 			// Check the time
 			age := time.Since(entry.(TimestampedEntry).CachedAt)
-			if age > DescriptionCacheTimeoutSeconds * time.Second {
+			if age > DescriptionCacheTimeoutSeconds*time.Second {
 				// expired, remove
 				log.WithFields(log.Fields{"age": age, "key": key}).Info("vuln description expired entry")
 				vulnDescriptionCache.Remove(key)
@@ -152,7 +152,7 @@ func GetCachedDbUpdateTime() (time.Time, bool) {
 	}
 	age := time.Since(dbUpdateCachedAt)
 
-	if age > DbUpdateCacheTimeoutSeconds * time.Second {
+	if age > DbUpdateCacheTimeoutSeconds*time.Second {
 		log.WithField("age", age).Info("dbUpdateTime expired cache for db update timestamp")
 		return dbUpdateCached, false
 	} else {
