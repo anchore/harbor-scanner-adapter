@@ -230,17 +230,27 @@ func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(scanId string, inclu
 	if includeDescriptions {
 		// Get vulnerability id/group mappings for getting additional metadata
 		// remove duplicates where vuln can have multiple matches
-		uniqVulnIdNamespacePairs := make(map[client.VulnNamespaceDescription]bool)
+		uniqVulnIdNamespacePairs := make(map[anchore.NamespacedVulnerability]bool)
 		for _, v := range anchoreVulnResponse.Vulnerabilities {
-			uniqVulnIdNamespacePairs[client.VulnNamespaceDescription{
+			vulnId := anchore.NamespacedVulnerability{
 				ID:          v.VulnerabilityID,
 				Namespace:   v.FeedGroup,
 				Description: "",
-			}] = true
+			}
+
+			// Check cache
+			cachedDescription, ok := GetCachedVulnDescription(vulnId)
+			if ok {
+				// Found in cache, add to the final map
+				vulnDescriptionMap[vulnId.ID] = cachedDescription
+			} else {
+				// Not in cache, pass to lookup array
+				uniqVulnIdNamespacePairs[vulnId] = true
+			}
 		}
 
 		// Convert the map into an array for downstream
-		vulns := make([]client.VulnNamespaceDescription, len(uniqVulnIdNamespacePairs))
+		vulns := make([]anchore.NamespacedVulnerability, len(uniqVulnIdNamespacePairs))
 		i := 0
 		for v := range uniqVulnIdNamespacePairs {
 			vulns[i] = v
@@ -255,13 +265,13 @@ func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(scanId string, inclu
 			log.Printf("could not get vulnerability metadata for populating descriptions due to error %v", err)
 		}
 
-		log.Debugf("description list %v", vulns)
-
 		// Pivot to a map for next call
 		for _, desc := range vulns {
 			vulnDescriptionMap[desc.ID] = desc.Description
+
+			// Add to the cache
+			CacheVulnDescription(desc)
 		}
-		log.Debugf("description map %v", vulnDescriptionMap)
 
 		descriptionTime := time.Now().Sub(start)
 		log.WithFields(log.Fields{"duration": descriptionTime}).Debug("time to get descriptions")
@@ -273,6 +283,15 @@ func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(scanId string, inclu
 }
 
 func (s *HarborScannerAdapter) GetAnchoreVulnReport(digest string) (anchore.ImageVulnerabilityReport, error) {
+	log.WithField("digest", digest).Debug("checking vulnerability report cache")
+	anchoreVulnResponse, ok := GetCachedVulnReport(digest)
+	if ok {
+		log.Debug("found report in cache")
+		return anchoreVulnResponse, nil
+	} else {
+		log.Debug("no report in cache, generating")
+	}
+
 	img, err := client.GetImage(s.ClientConfiguration, digest)
 	if err != nil {
 		return anchore.ImageVulnerabilityReport{}, err
@@ -290,7 +309,14 @@ func (s *HarborScannerAdapter) GetAnchoreVulnReport(digest string) (anchore.Imag
 			log.Debug("Pending analysis")
 		}
 	}
-	return client.GetImageVulnerabilities(s.ClientConfiguration, digest, s.ClientConfiguration.FilterVendorIgnoredVulns)
+
+	report, err := client.GetImageVulnerabilities(s.ClientConfiguration, digest, s.ClientConfiguration.FilterVendorIgnoredVulns)
+	if err != nil {
+		log.Debug("caching result report")
+		CacheVulnReport(digest, report)
+	}
+
+	return report, err
 }
 
 // update method and parameter passed in

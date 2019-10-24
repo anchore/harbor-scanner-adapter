@@ -28,12 +28,6 @@ const (
 	FeedsURL                                = "/v1/system/feeds"
 )
 
-type VulnNamespaceDescription struct {
-	ID          string
-	Namespace   string
-	Description string
-}
-
 // Handle error responses generically
 func unmarshalError(body []byte, response gorequest.Response) (anchore.Error, error) {
 	result := anchore.Error{}
@@ -98,7 +92,7 @@ func AnalyzeImage(clientConfiguration *ClientConfig, analyzeRequest anchore.Imag
 }
 
 // Updates the Description fields in the input array of Description objects
-func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]VulnNamespaceDescription) error {
+func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]anchore.NamespacedVulnerability) error {
 	var vulnListing anchore.VulnerabilityQueryResults
 
 	// Sort and get namespaces for efficient lookups

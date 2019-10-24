@@ -5,7 +5,7 @@ go 1.12
 require (
 	github.com/elazarl/goproxy v0.0.0-20190711103511-473e67f1d7d2 // indirect
 	github.com/elazarl/goproxy/ext v0.0.0-20191011121108-aa519ddbe484 // indirect
-	github.com/golang/mock v1.3.1 // indirect
+	github.com/golang/groupcache v0.0.0-20191002201903-404acd9df4cc
 	github.com/gorilla/mux v1.7.3
 	github.com/moul/http2curl v1.0.0 // indirect
 	github.com/parnurzeal/gorequest v0.2.15

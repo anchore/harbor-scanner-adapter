@@ -1,12 +1,13 @@
 package client
 
 import (
+	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
 	"sort"
 	"testing"
 )
 
 func TestSorting(t *testing.T) {
-	vulns := []VulnNamespaceDescription{
+	vulns := []anchore.NamespacedVulnerability{
 		{
 			"id1",
 			"namespace1",
