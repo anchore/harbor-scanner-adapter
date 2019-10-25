@@ -138,6 +138,13 @@ func (h *APIHandler) CreateScan(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	logRequest := scanRequest
+	logRequest.Registry.Authorization = "[REDACTED]"
+	redacted, err := json.Marshal(logRequest)
+	if err == nil {
+		log.WithField("request", string(redacted)).Debug("scan request")
+	}
+
 	scanResponse, err := h.scanner.Scan(scanRequest)
 	if err != nil {
 		log.WithField("err", err).Errorf("failed executing the scan request")
