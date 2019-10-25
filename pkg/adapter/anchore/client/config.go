@@ -20,6 +20,7 @@ type ClientConfig struct {
 	Password                 string `json:"password"`
 	TimeoutSeconds           int    `json:"timeoutSeconds"`
 	FilterVendorIgnoredVulns bool   `json:"filterVendorIgnoredVulns"`
+	SkipTLSVerify            bool   `json:"skipTlSVerify"`
 }
 
 const (
@@ -30,6 +31,7 @@ const (
 	AuthConfigFile           = "ANCHORE_AUTHFILE_PATH"
 	TimeoutEnvVarName        = "ANCHORE_CLIENT_TIMEOUT_SECONDS"
 	FilterVendorIgnoredVulns = "ANCHORE_FILTER_VENDOR_IGNORED"
+	SkipTLSVerifyEnvVarName  = "ANCHORE_SKIP_TLS_VERIFY"
 )
 
 func GetConfig() (*ClientConfig, error) {
@@ -86,6 +88,13 @@ func GetConfig() (*ClientConfig, error) {
 	if cfg.TimeoutSeconds <= 0 {
 		cfg.TimeoutSeconds = DefaultTimeoutSeconds
 		log.Printf("Using default client call timeout: %v", cfg.TimeoutSeconds)
+	}
+
+	if tlsVerify, ok := os.LookupEnv(SkipTLSVerifyEnvVarName); ok {
+		cfg.SkipTLSVerify = strings.ToLower(tlsVerify) == "true"
+	} else {
+		// False by default
+		cfg.SkipTLSVerify = false
 	}
 
 	return cfg, nil

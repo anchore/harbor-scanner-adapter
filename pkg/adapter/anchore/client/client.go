@@ -1,6 +1,7 @@
 package client
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
@@ -27,6 +28,11 @@ const (
 	RegistryCredentialUpdateURLTemplate     = "/v1/registries/%s"
 	FeedsURL                                = "/v1/system/feeds"
 )
+
+func getNewRequest(clientConfiguration *ClientConfig) *gorequest.SuperAgent {
+	timeout := time.Duration(clientConfiguration.TimeoutSeconds) * time.Second
+	return gorequest.New().TLSClientConfig(&tls.Config{ InsecureSkipVerify: clientConfiguration.SkipTLSVerify}).SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password).Timeout(timeout)
+}
 
 // Handle error responses generically
 func unmarshalError(body []byte, response gorequest.Response) (anchore.Error, error) {
@@ -68,18 +74,16 @@ func unmarshalError(body []byte, response gorequest.Response) (anchore.Error, er
 func AnalyzeImage(clientConfiguration *ClientConfig, analyzeRequest anchore.ImageScanRequest) error {
 	log.WithFields(log.Fields{"request": analyzeRequest}).Info("requesting image analysis")
 
-	//var imageList anchore.ImageList
-	timeout := time.Duration(clientConfiguration.TimeoutSeconds) * time.Second
-	request := gorequest.New().SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password)
+	request := getNewRequest(clientConfiguration)
 
 	reqUrl, err := buildUrl(*clientConfiguration, AddImageURL, nil)
 	if err != nil {
 		return err
 	}
 
-	log.WithFields(log.Fields{"method": "post", "url": reqUrl, "timeout": timeout}).Debug("sending request to anchore api")
+	log.WithFields(log.Fields{"method": "post", "url": reqUrl}).Debug("sending request to anchore api")
 	// call API get the full report until "analysis_status" = "analyzed"
-	resp, _, errs := request.Post(reqUrl).Set("Content-Type", "application/json").Timeout(timeout).Send(analyzeRequest).EndBytes()
+	resp, _, errs := request.Post(reqUrl).Set("Content-Type", "application/json").Send(analyzeRequest).EndBytes()
 	checkStatusStruct(resp, errs)
 	if errs != nil {
 		log.Errorf("could not contact anchore api")
@@ -214,8 +218,7 @@ func QueryVulnerabilityRecords(clientConfiguration *ClientConfig, ids []string, 
 	vulnIdsStr := strings.Join(ids, ",")
 	namespaceStr := strings.Join(namespaces, ",")
 
-	timeout := time.Duration(clientConfiguration.TimeoutSeconds) * time.Second
-	request := gorequest.New().SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password)
+	request := getNewRequest(clientConfiguration)
 	more_pages := true
 
 	start = time.Now()
@@ -227,7 +230,7 @@ func QueryVulnerabilityRecords(clientConfiguration *ClientConfig, ids []string, 
 	for more_pages {
 		pageStart = time.Now()
 
-		req := request.Get(reqUrl).Param("id", vulnIdsStr).Param("namespace", namespaceStr).Timeout(timeout)
+		req := request.Get(reqUrl).Param("id", vulnIdsStr).Param("namespace", namespaceStr)
 		if page != "" {
 			log.Debug("getting page ", page)
 			req = req.Param("page", page)
@@ -302,9 +305,8 @@ func GetImageVulnerabilities(clientConfiguration *ClientConfig, digest string, f
 		return imageVulnerabilityReport, err
 	}
 
-	request := gorequest.New().SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password)
-	timeout := time.Duration(clientConfiguration.TimeoutSeconds) * time.Second
-	resp, body, errs := request.Get(reqUrl).Param("vendor_only", strconv.FormatBool(filterIgnored)).Timeout(timeout).EndBytes()
+	request := getNewRequest(clientConfiguration)
+	resp, body, errs := request.Get(reqUrl).Param("vendor_only", strconv.FormatBool(filterIgnored)).EndBytes()
 	if errs != nil {
 		return imageVulnerabilityReport, errs[0]
 	}
@@ -325,17 +327,16 @@ func GetImage(clientConfiguration *ClientConfig, digest string) (anchore.ImageLi
 	log.WithFields(log.Fields{"digest": digest}).Debug("retrieving anchore state for image")
 
 	var imageList anchore.ImageList
-	timeout := time.Duration(clientConfiguration.TimeoutSeconds) * time.Second
-	request := gorequest.New().SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password)
+	request := getNewRequest(clientConfiguration)
 
 	reqUrl, err := buildUrl(*clientConfiguration, GetImageURLTemplate, []interface{}{digest})
 	if err != nil {
 		return imageList, err
 	}
 
-	log.WithFields(log.Fields{"method": "get", "url": reqUrl, "timeout": timeout}).Debug("sending request to anchore api")
+	log.WithFields(log.Fields{"method": "get", "url": reqUrl}).Debug("sending request to anchore api")
 	// call API get the full report until "analysis_status" = "analyzed"
-	resp, body, errs := request.Get(reqUrl).Timeout(timeout).EndBytes()
+	resp, body, errs := request.Get(reqUrl).EndBytes()
 	checkStatusStruct(resp, errs)
 	if errs != nil {
 		log.Errorf("could not contact anchore api")
@@ -351,14 +352,13 @@ func GetImage(clientConfiguration *ClientConfig, digest string) (anchore.ImageLi
 }
 
 func GetVulnDbUpdateTime(clientConfiguration *ClientConfig) (time.Time, error) {
-	request := gorequest.New().SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password)
-	timeout := time.Duration(clientConfiguration.TimeoutSeconds) * time.Second
+	request := getNewRequest(clientConfiguration)
 	reqUrl, err := buildUrl(*clientConfiguration, FeedsURL, nil)
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	resp, body, errs := request.Get(reqUrl).Timeout(timeout).EndBytes()
+	resp, body, errs := request.Get(reqUrl).EndBytes()
 	if errs != nil {
 		return time.Time{}, errs[0]
 	}
@@ -452,8 +452,7 @@ func buildUrl(config ClientConfig, requestPathTemplate string, args []interface{
 
 // Add a new registry credential to anchore
 func AddRegistryCredential(clientConfiguration *ClientConfig, registry string, repository string, username string, password string) (gorequest.Response, []byte, []error) {
-	timeout := time.Duration(clientConfiguration.TimeoutSeconds) * time.Second
-	request := gorequest.New().SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password)
+	request := getNewRequest(clientConfiguration)
 	registryName, err := RegistryNameFromRepo(registry, repository)
 	if err != nil {
 		return nil, nil, []error{err}
@@ -466,13 +465,12 @@ func AddRegistryCredential(clientConfiguration *ClientConfig, registry string, r
 
 	var payload = fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password)
 
-	return request.Post(registryAddUrl).Set("Content-Type", "application/json").Timeout(timeout).Send(payload).EndBytes()
+	return request.Post(registryAddUrl).Set("Content-Type", "application/json").Send(payload).EndBytes()
 }
 
 // Update an existing credential record
 func UpdateRegistryCredential(clientConfiguration *ClientConfig, registry string, repository string, username string, password string) (gorequest.Response, []byte, []error) {
-	timeout := time.Duration(clientConfiguration.TimeoutSeconds) * time.Second
-	request := gorequest.New().SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password)
+	request := getNewRequest(clientConfiguration)
 	registryName, err := RegistryNameFromRepo(registry, repository)
 	if err != nil {
 		log.WithField("err", err).Error("cannot update pull credential due to registry name construction failing")
@@ -489,7 +487,7 @@ func UpdateRegistryCredential(clientConfiguration *ClientConfig, registry string
 	var payload = fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password)
 
 	log.Debug("Updating creds that already exist for this repo")
-	return request.Put(u.String()).Set("Content-Type", "application/json").Timeout(timeout).Send(payload).EndBytes()
+	return request.Put(u.String()).Set("Content-Type", "application/json").Send(payload).EndBytes()
 }
 
 func checkStatusStruct(resp gorequest.Response, errs []error) {
