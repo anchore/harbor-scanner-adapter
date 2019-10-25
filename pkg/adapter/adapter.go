@@ -64,7 +64,7 @@ type ServiceConfig struct {
 	ApiKey                        string // Key for auth, used as a Bearer token
 	LogFormat                     string
 	LogLevel                      log.Level
-	FullVulnerabilityDescriptions bool //If true, the scanner adapter will query anchore to get vuln descriptions, else will use cvss string and defer to the link url
+	FullVulnerabilityDescriptions bool   //If true, the scanner adapter will query anchore to get vuln descriptions, else will use cvss string and defer to the link url
 	TLSKeyFile                    string // Path to key file
 	TLSCertFile                   string // Path to cert file
 }
@@ -134,11 +134,11 @@ func GetConfig() (ServiceConfig, error) {
 		cfg.FullVulnerabilityDescriptions = true
 	}
 
-	if cfg.TLSCertFile, ok = os.LookupEnv(TlsCertEnvVar); ! ok {
+	if cfg.TLSCertFile, ok = os.LookupEnv(TlsCertEnvVar); !ok {
 		cfg.TLSCertFile = ""
 	}
 
-	if cfg.TLSKeyFile, ok = os.LookupEnv(TlsKeyEnvVar); ! ok {
+	if cfg.TLSKeyFile, ok = os.LookupEnv(TlsKeyEnvVar); !ok {
 		cfg.TLSKeyFile = ""
 	}
 
