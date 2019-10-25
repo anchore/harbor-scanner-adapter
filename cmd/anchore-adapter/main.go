@@ -50,9 +50,20 @@ func main() {
 	v1Router.Methods("POST").Path("/scan").HandlerFunc(apiHandler.CreateScan)
 	v1Router.Methods("GET").Path("/scan/{scanId}/report").HandlerFunc(apiHandler.GetScanReport)
 
-	log.WithField("address", adapterConfig.ListenAddr).Info("listening for connections")
-	err = http.ListenAndServe(adapterConfig.ListenAddr, router)
-	if err != nil && err != http.ErrServerClosed {
-		log.WithField("err", err).Fatalf("error in server listener")
+	if adapterConfig.TLSCertFile != "" && adapterConfig.TLSKeyFile != "" {
+		// Setup TLS
+		log.WithField("address", adapterConfig.ListenAddr).Info("listening for HTTPS connections")
+
+		err = http.ListenAndServeTLS(adapterConfig.ListenAddr, adapterConfig.TLSCertFile, adapterConfig.TLSKeyFile, router)
+		if err != nil && err != http.ErrServerClosed {
+			log.WithField("err", err).Fatalf("error in server listener")
+		}
+	} else {
+		// No TLS
+		log.WithField("address", adapterConfig.ListenAddr).Info("listening for HTTP connections")
+		err = http.ListenAndServe(adapterConfig.ListenAddr, router)
+		if err != nil && err != http.ErrServerClosed {
+			log.WithField("err", err).Fatalf("error in server listener")
+		}
 	}
 }

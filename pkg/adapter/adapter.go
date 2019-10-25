@@ -31,6 +31,8 @@ const (
 	LogFormatEnvVar               = "SCANNER_ADAPTER_LOG_FORMAT"
 	ApiKeyEnvVar                  = "SCANNER_ADAPTER_APIKEY"
 	FullVulnDescriptionsEnvVar    = "SCANNER_ADAPTER_FULL_VULN_DESCRIPTIONS"
+	TlsKeyEnvVar                  = "SCANNER_ADAPTER_TLS_KEY_FILE"
+	TlsCertEnvVar                 = "SCANNER_ADAPTER_TLS_CERT_FILE"
 )
 
 var AdapterMetadata = harbor.ScannerAdapterMetadata{
@@ -63,6 +65,8 @@ type ServiceConfig struct {
 	LogFormat                     string
 	LogLevel                      log.Level
 	FullVulnerabilityDescriptions bool //If true, the scanner adapter will query anchore to get vuln descriptions, else will use cvss string and defer to the link url
+	TLSKeyFile                    string // Path to key file
+	TLSCertFile                   string // Path to cert file
 }
 
 // ScannerAdapter defines methods for scanning container images.
@@ -128,6 +132,14 @@ func GetConfig() (ServiceConfig, error) {
 	} else {
 		log.Info("No full vulnerability description value found in env, defaulting to 'true'")
 		cfg.FullVulnerabilityDescriptions = true
+	}
+
+	if cfg.TLSCertFile, ok = os.LookupEnv(TlsCertEnvVar); ! ok {
+		cfg.TLSCertFile = ""
+	}
+
+	if cfg.TLSKeyFile, ok = os.LookupEnv(TlsKeyEnvVar); ! ok {
+		cfg.TLSKeyFile = ""
 	}
 
 	return cfg, nil

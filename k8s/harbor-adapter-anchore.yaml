@@ -35,16 +35,30 @@ spec:
                   name: anchore-creds
                   key: password
             - name: ANCHORE_CLIENT_TIMEOUT_SECONDS
-              value: "10"
+              value: "60"
             - name: ANCHORE_FILTER_VENDOR_IGNORED
               value: "true"
             - name: SCANNER_ADAPTER_LOG_LEVEL
               value: "debug"
-              # To enable api authentication, uncomment this and set it to a good randomized value. Use that same value in the scanner config in Harbor UI with "Bearer" type
-              #- name: "SCANNER_ADAPTER_APIKEY"
-              #value: "apikey123"
-          ports:
-            - containerPort: 8080
+# To enable api authentication, uncomment this and set it to a good randomized value. Use that same value in the scanner config in Harbor UI with "Bearer" type
+#            - name: "SCANNER_ADAPTER_APIKEY"
+#              value: "apikey123"
+
+# Uncomment below to enable https in api
+#            - name: SCANNER_ADAPTER_TLS_KEY_FILE
+#              value: "/certs/tls.key"
+#            - name: SCANNER_ADAPTER_TLS_CERT_FILE
+#              value: "/certs/tls.crt"
+
+#          volumeMounts:
+#            - name: certs
+#              mountPath: /certs
+#          ports:
+#            - containerPort: 8080
+#      volumes:
+#        - name: certs
+#          secret:
+#            secretName: adapter-certs
 ---
 apiVersion: v1
 kind: Service
