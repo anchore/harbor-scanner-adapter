@@ -19,7 +19,7 @@ const (
 	TestTag1     = "latest"
 )
 
-var okConfig = adapter.ServiceConfig{
+var okConfig = anchore.AdapterConfig{
 	ListenAddr:                    ":8080",
 	ApiKey:                        "apikey123",
 	LogFormat:                     "",

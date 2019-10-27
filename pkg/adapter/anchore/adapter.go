@@ -23,17 +23,21 @@ const (
 )
 
 type HarborScannerAdapter struct {
-	ClientConfiguration *client.ClientConfig
+	Configuration *AdapterConfig
 }
 
-// NewScanner constructs new HarborScannerAdapter with the given Config.
-func NewScanner(cfg *client.ClientConfig) (adapter.ScannerAdapter, error) {
-	if cfg == nil {
-		return nil, errors.New("anchore client configuration must not be nil")
+// Compute the key for the item
+func cacheKeyForVuln(v *anchore.NamespacedVulnerability) string {
+	if v != nil {
+		return fmt.Sprintf("%v/%v", v.Namespace, v.ID)
+	} else {
+		return ""
 	}
-	return &HarborScannerAdapter{
-		ClientConfiguration: cfg,
-	}, nil
+}
+
+// NewScannerAdapter constructs new HarborScannerAdapter with the given Config.
+func NewScannerAdapter(cfg *AdapterConfig) (adapter.ScannerAdapter, error) {
+	return &HarborScannerAdapter{cfg}, nil
 }
 
 // Create a scan id from the input image properties
@@ -123,7 +127,7 @@ func GetUsernamePassword(authorizationInput string) (string, string, error) {
 // Add credentials to Anchore for authorizing the image fetch
 func (s *HarborScannerAdapter) EnsureRegistryCredentials(registry string, repository string, username string, password string) error {
 	// New method, using client
-	resp, body, errs := client.AddRegistryCredential(s.ClientConfiguration, registry, repository, username, password)
+	resp, body, errs := client.AddRegistryCredential(&s.Configuration.AnchoreClientConfig, registry, repository, username, password, s.Configuration.RegistryTLSVerify, s.Configuration.RegistryValidateCreds)
 	if errs != nil {
 		log.WithField("errs", errs).Error("could not execute request to anchore api to add registry credential")
 		return errs[0]
@@ -142,7 +146,7 @@ func (s *HarborScannerAdapter) EnsureRegistryCredentials(registry string, reposi
 			log.WithField("msg", anchoreError.Message).Debug("updating registry credential since one already exists")
 
 			// Do update
-			resp, body, errs = client.UpdateRegistryCredential(s.ClientConfiguration, registry, repository, username, password)
+			resp, body, errs = client.UpdateRegistryCredential(&s.Configuration.AnchoreClientConfig, registry, repository, username, password, s.Configuration.RegistryTLSVerify, s.Configuration.RegistryValidateCreds)
 			if errs != nil {
 				log.WithField("errs", errs).Error("could not execute request to anchore api to update registry credential")
 				return errs[0]
@@ -195,7 +199,7 @@ func (s *HarborScannerAdapter) Scan(req harbor.ScanRequest) (harbor.ScanResponse
 		return harbor.ScanResponse{}, err
 	}
 
-	err = client.AnalyzeImage(s.ClientConfiguration, *anchoreScanRequest)
+	err = client.AnalyzeImage(&s.Configuration.AnchoreClientConfig, *anchoreScanRequest)
 	if err != nil {
 		log.Error("Could not submit image for analysis ", err)
 		return harbor.ScanResponse{}, err
@@ -242,10 +246,11 @@ func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(scanId string, inclu
 			}
 
 			// Check cache
-			cachedDescription, ok := GetCachedVulnDescription(vulnId)
+
+			cachedDescription, ok := DescriptionCache.Get(cacheKeyForVuln(&vulnId))
 			if ok {
 				// Found in cache, add to the final map
-				vulnDescriptionMap[vulnId.ID] = cachedDescription
+				vulnDescriptionMap[vulnId.ID] = cachedDescription.(string)
 			} else {
 				// Not in cache, pass to lookup array
 				uniqVulnIdNamespacePairs[vulnId] = true
@@ -262,7 +267,7 @@ func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(scanId string, inclu
 
 		// Add the descriptions in
 		start := time.Now()
-		err = client.GetVulnerabilityDescriptions(s.ClientConfiguration, &vulns)
+		err = client.GetVulnerabilityDescriptions(&s.Configuration.AnchoreClientConfig, &vulns)
 		if err != nil {
 			//Return without desc
 			log.Printf("could not get vulnerability metadata for populating descriptions due to error %v", err)
@@ -273,7 +278,7 @@ func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(scanId string, inclu
 			vulnDescriptionMap[desc.ID] = desc.Description
 
 			// Add to the cache
-			CacheVulnDescription(desc)
+			DescriptionCache.Add(cacheKeyForVuln(&desc), desc.Description)
 		}
 
 		descriptionTime := time.Now().Sub(start)
@@ -287,15 +292,15 @@ func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(scanId string, inclu
 
 func (s *HarborScannerAdapter) GetAnchoreVulnReport(digest string) (anchore.ImageVulnerabilityReport, error) {
 	log.WithField("digest", digest).Debug("checking vulnerability report cache")
-	anchoreVulnResponse, ok := GetCachedVulnReport(digest)
+	anchoreVulnResponse, ok := ReportCache.Get(digest)
 	if ok {
-		log.Debug("found report in cache")
-		return anchoreVulnResponse, nil
+		log.WithField("digest", digest).Debug("found report in cache")
+		return anchoreVulnResponse.(anchore.ImageVulnerabilityReport), nil
 	} else {
-		log.Debug("no report in cache, generating")
+		log.WithField("digest", digest).Debug("no report in cache, generating")
 	}
 
-	img, err := client.GetImage(s.ClientConfiguration, digest)
+	img, err := client.GetImage(&s.Configuration.AnchoreClientConfig, digest)
 	if err != nil {
 		return anchore.ImageVulnerabilityReport{}, err
 	}
@@ -315,10 +320,10 @@ func (s *HarborScannerAdapter) GetAnchoreVulnReport(digest string) (anchore.Imag
 		}
 	}
 
-	report, err := client.GetImageVulnerabilities(s.ClientConfiguration, digest, s.ClientConfiguration.FilterVendorIgnoredVulns)
+	report, err := client.GetImageVulnerabilities(&s.Configuration.AnchoreClientConfig, digest, s.Configuration.FilterVendorIgnoredVulns)
 	if err == nil {
-		log.Debug("caching result report")
-		CacheVulnReport(digest, report)
+		log.WithField("digest", digest).Debug("caching result report")
+		ReportCache.Add(digest, report)
 	}
 
 	return report, err
@@ -431,17 +436,23 @@ func nowISOFormat() string {
 
 func (s *HarborScannerAdapter) GetMetadata() (harbor.ScannerAdapterMetadata, error) {
 	adapterMeta := adapter.AdapterMetadata
-
+	var err error
 	var feedsUpdated time.Time
-	feedsUpdated, err := client.GetVulnDbUpdateTime(s.ClientConfiguration)
-	if err != nil {
-		log.WithField("err", err).Error("could not get vulnerability db update time")
-		return harbor.ScannerAdapterMetadata{}, err
-		//adapterMeta.Properties[adapter.HarborMetadataVulnDbUpdateKey] = ""
+
+	if cached, ok := UpdateTimestampCache.Get("db"); ok {
+		feedsUpdated = cached.(time.Time)
 	} else {
-		log.WithField("db_update_timestamp", feedsUpdated).Debug("vulnerability DB update timestamp retrieved")
-		adapterMeta.Properties[adapter.HarborMetadataVulnDbUpdateKey] = feedsUpdated.Format(time.RFC3339)
+		feedsUpdated, err = client.GetVulnDbUpdateTime(&s.Configuration.AnchoreClientConfig)
+		if err != nil {
+			log.WithField("err", err).Error("could not get vulnerability db update time")
+			return harbor.ScannerAdapterMetadata{}, err
+		}
 	}
 
+	// Cache result
+	UpdateTimestampCache.Add("db", feedsUpdated)
+
+	log.WithField("db_update_timestamp", feedsUpdated).Debug("vulnerability DB update timestamp retrieved")
+	adapterMeta.Properties[adapter.HarborMetadataVulnDbUpdateKey] = feedsUpdated.Format(time.RFC3339)
 	return adapterMeta, nil
 }

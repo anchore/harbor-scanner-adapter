@@ -1,9 +1,7 @@
 package main
 
 import (
-	"github.com/anchore/harbor-scanner-adapter/pkg/adapter"
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore"
-	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/client"
 	api "github.com/anchore/harbor-scanner-adapter/pkg/http/api/v1"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -12,7 +10,7 @@ import (
 
 func main() {
 	// Load the adapter configuration, separate from the client config
-	adapterConfig, err := adapter.GetConfig()
+	adapterConfig, err := anchore.GetConfig()
 	if err != nil {
 		log.WithField("err", err).Fatalf("no configuration found")
 	}
@@ -25,14 +23,8 @@ func main() {
 	log.Info("Log level ", log.GetLevel())
 	log.Info("Starting harbor-scanner-anchore")
 
-	// Load the client configuration, which contains credentials for anchore api, so treated as a secret
-	anchoreClientConfig, err := client.GetConfig()
-	if err != nil {
-		log.WithField("err", err).Fatalf("error loading anchore client configuration")
-	}
-
 	// Start the API service
-	scanner, err := anchore.NewScanner(anchoreClientConfig)
+	scanner, err := anchore.NewScannerAdapter(&adapterConfig)
 	if err != nil {
 		log.WithField("err", err).Fatalf("error instantiating scanner with configuration")
 	}

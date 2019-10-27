@@ -1,0 +1,102 @@
+package anchore
+
+import (
+	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
+	"github.com/golang/groupcache/lru"
+	log "github.com/sirupsen/logrus"
+	"sync"
+	"time"
+)
+
+// A simple struct to track the cache time for the entry as well as the value itself
+type TimestampedEntry struct {
+	CachedAt time.Time
+	Object   interface{}
+}
+
+type CacheConfiguration struct {
+	VulnDescriptionCacheEnabled  bool
+	VulnDescriptionCacheMaxCount int
+	VulnDescriptionCacheTTL      int
+	DbUpdateCacheEnabled         bool
+	DbUpdatedCacheTTL            int
+	VulnReportCacheEnabled       bool
+	VulnReportCacheMaxCount      int
+	VulnReportCacheTTL           int
+}
+
+type ConcurrentCache interface {
+	Add(key string, obj interface{}) error
+	Get(key string) (interface{}, bool)
+	Flush() error
+}
+
+type LockingTTLCache struct {
+	Cache   *lru.Cache    // The data store, stores TimestampedEntry values
+	Lock    sync.Mutex    // Lock for concurrency
+	TTL     time.Duration //TTL for values
+	Enabled bool          //If true, use the cache, else always bypass
+}
+
+var DescriptionCache *LockingTTLCache
+var ReportCache *LockingTTLCache
+var UpdateTimestampCache *LockingTTLCache
+
+func NewCache(enabled bool, size int, ttl int) *LockingTTLCache {
+	if !enabled {
+		size = 0
+	}
+	return &LockingTTLCache{
+		Cache:   lru.New(size),
+		Lock:    sync.Mutex{},
+		TTL:     time.Duration(ttl) * time.Second,
+		Enabled: enabled,
+	}
+}
+
+func (c *LockingTTLCache) Get(key string) (interface{}, bool) {
+	if c.Enabled {
+		c.Lock.Lock()
+		defer c.Lock.Unlock()
+		if entry, ok := c.Cache.Get(key); ok {
+			// Check the time
+			age := time.Since(entry.(TimestampedEntry).CachedAt)
+			if age > c.TTL*time.Second {
+				// expired, remove
+				log.WithFields(log.Fields{"age": age, "key": key}).Debug("expired entry")
+				c.Cache.Remove(key)
+			} else {
+				log.WithFields(log.Fields{"age": age, "key": key}).Debug("expired entry")
+				// ok, return
+				return entry.(TimestampedEntry).Object.(anchore.ImageVulnerabilityReport), true
+			}
+		}
+	}
+	return nil, false
+}
+
+// Cache a vuln report
+func (c *LockingTTLCache) Add(key string, obj interface{}) {
+	if c.Enabled {
+		c.Lock.Lock()
+		defer c.Lock.Unlock()
+		c.Cache.Add(key, TimestampedEntry{
+			CachedAt: time.Now(),
+			Object:   obj,
+		})
+	}
+}
+
+// Drop the cache
+func (c *LockingTTLCache) Flush() {
+	c.Lock.Lock()
+	defer c.Lock.Unlock()
+	c.Cache.Clear()
+}
+
+func InitCaches(configuration CacheConfiguration) error {
+	DescriptionCache = NewCache(configuration.VulnDescriptionCacheEnabled, configuration.VulnDescriptionCacheMaxCount, configuration.VulnDescriptionCacheTTL)
+	ReportCache = NewCache(configuration.VulnReportCacheEnabled, configuration.VulnReportCacheMaxCount, configuration.VulnReportCacheTTL)
+	UpdateTimestampCache = NewCache(configuration.DbUpdateCacheEnabled, 1, configuration.DbUpdatedCacheTTL)
+	return nil
+}

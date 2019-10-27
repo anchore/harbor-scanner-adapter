@@ -113,8 +113,8 @@ func TestCacheVulnDescriptionTimeout(t *testing.T) {
 	}
 
 	CacheVulnDescription(desc1)
-	sleepDuration := time.Second * (VulnReportCacheTimeoutSeconds + 1)
-	t.Log("Sleeping to test ttl: ", VulnReportCacheTimeoutSeconds+1)
+	sleepDuration := time.Second * (DefaultVulnReportCacheTimeoutSeconds + 1)
+	t.Log("Sleeping to test ttl: ", DefaultVulnReportCacheTimeoutSeconds+1)
 	time.Sleep(sleepDuration)
 
 	_, ok := GetCachedVulnDescription(anchore.NamespacedVulnerability{

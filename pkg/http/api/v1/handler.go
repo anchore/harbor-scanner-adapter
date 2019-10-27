@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter"
+	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore"
 	"github.com/anchore/harbor-scanner-adapter/pkg/model/harbor"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -33,10 +34,10 @@ const (
 
 type APIHandler struct {
 	scanner adapter.ScannerAdapter
-	config  adapter.ServiceConfig
+	config  anchore.AdapterConfig
 }
 
-func NewAPIHandler(scanner adapter.ScannerAdapter, cfg adapter.ServiceConfig) *APIHandler {
+func NewAPIHandler(scanner adapter.ScannerAdapter, cfg anchore.AdapterConfig) *APIHandler {
 	return &APIHandler{
 		scanner: scanner,
 		config:  cfg,

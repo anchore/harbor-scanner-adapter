@@ -19,7 +19,7 @@ import (
 const (
 	CHUNKSIZE                               = 100
 	NVDFEEDGROUP                            = "nvdv2:cves"
-	RegistryCredentialUpdateRequestTemplate = `{"registry": "%v", "registry_user": "%v", "registry_pass": "%v", "registry_verify": false, "registry_type": "docker_v2"}`
+	RegistryCredentialUpdateRequestTemplate = `{"registry": "%v", "registry_user": "%v", "registry_pass": "%v", "registry_verify": %v, "registry_type": "docker_v2"}`
 	AddImageURL                             = "/v1/images"
 	GetImageURLTemplate                     = "/v1/images/%s"
 	GetImageVulnerabilitiesURLTemplate      = "/v1/images/%s/vuln/all"
@@ -29,9 +29,17 @@ const (
 	FeedsURL                                = "/v1/system/feeds"
 )
 
+type ClientConfig struct {
+	Endpoint       string
+	Username       string
+	Password       string
+	TimeoutSeconds int
+	TLSVerify      bool
+}
+
 func getNewRequest(clientConfiguration *ClientConfig) *gorequest.SuperAgent {
 	timeout := time.Duration(clientConfiguration.TimeoutSeconds) * time.Second
-	return gorequest.New().TLSClientConfig(&tls.Config{ InsecureSkipVerify: clientConfiguration.SkipTLSVerify}).SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password).Timeout(timeout)
+	return gorequest.New().TLSClientConfig(&tls.Config{InsecureSkipVerify: clientConfiguration.TLSVerify}).SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password).Timeout(timeout)
 }
 
 // Handle error responses generically
@@ -451,7 +459,7 @@ func buildUrl(config ClientConfig, requestPathTemplate string, args []interface{
 }
 
 // Add a new registry credential to anchore
-func AddRegistryCredential(clientConfiguration *ClientConfig, registry string, repository string, username string, password string) (gorequest.Response, []byte, []error) {
+func AddRegistryCredential(clientConfiguration *ClientConfig, registry string, repository string, username string, password string, registryTLSVerify bool, validateCreds bool) (gorequest.Response, []byte, []error) {
 	request := getNewRequest(clientConfiguration)
 	registryName, err := RegistryNameFromRepo(registry, repository)
 	if err != nil {
@@ -463,13 +471,13 @@ func AddRegistryCredential(clientConfiguration *ClientConfig, registry string, r
 		return nil, nil, []error{err}
 	}
 
-	var payload = fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password)
+	var payload = fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password, registryTLSVerify)
 
-	return request.Post(registryAddUrl).Set("Content-Type", "application/json").Send(payload).EndBytes()
+	return request.Post(registryAddUrl).Set("Content-Type", "application/json").Param("validate", strconv.FormatBool(validateCreds)).Send(payload).EndBytes()
 }
 
 // Update an existing credential record
-func UpdateRegistryCredential(clientConfiguration *ClientConfig, registry string, repository string, username string, password string) (gorequest.Response, []byte, []error) {
+func UpdateRegistryCredential(clientConfiguration *ClientConfig, registry string, repository string, username string, password string, registryTLSVerify bool, validateCreds bool) (gorequest.Response, []byte, []error) {
 	request := getNewRequest(clientConfiguration)
 	registryName, err := RegistryNameFromRepo(registry, repository)
 	if err != nil {
@@ -484,10 +492,10 @@ func UpdateRegistryCredential(clientConfiguration *ClientConfig, registry string
 
 	u.Path = path.Join(u.Path, fmt.Sprintf(RegistryCredentialUpdateURLTemplate, url.PathEscape(registryName)))
 
-	var payload = fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password)
+	var payload = fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password, registryTLSVerify)
 
 	log.Debug("Updating creds that already exist for this repo")
-	return request.Put(u.String()).Set("Content-Type", "application/json").Send(payload).EndBytes()
+	return request.Put(u.String()).Set("Content-Type", "application/json").Param("validate", strconv.FormatBool(validateCreds)).Send(payload).EndBytes()
 }
 
 func checkStatusStruct(resp gorequest.Response, errs []error) {
