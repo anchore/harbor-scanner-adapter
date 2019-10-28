@@ -94,6 +94,7 @@ func (c *LockingTTLCache) Flush() {
 }
 
 func InitCaches(configuration CacheConfiguration) error {
+	log.WithField("config", configuration).Info("initializing caches")
 	DescriptionCache = NewCache(configuration.VulnDescriptionCacheEnabled, configuration.VulnDescriptionCacheMaxCount, configuration.VulnDescriptionCacheTTL)
 	ReportCache = NewCache(configuration.VulnReportCacheEnabled, configuration.VulnReportCacheMaxCount, configuration.VulnReportCacheTTL)
 	UpdateTimestampCache = NewCache(configuration.DbUpdateCacheEnabled, 1, configuration.DbUpdatedCacheTTL)

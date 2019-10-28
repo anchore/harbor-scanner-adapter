@@ -37,6 +37,7 @@ func cacheKeyForVuln(v *anchore.NamespacedVulnerability) string {
 
 // NewScannerAdapter constructs new HarborScannerAdapter with the given Config.
 func NewScannerAdapter(cfg *AdapterConfig) (adapter.ScannerAdapter, error) {
+	InitCaches(cfg.CacheConfig)
 	return &HarborScannerAdapter{cfg}, nil
 }
 
@@ -246,7 +247,6 @@ func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(scanId string, inclu
 			}
 
 			// Check cache
-
 			cachedDescription, ok := DescriptionCache.Get(cacheKeyForVuln(&vulnId))
 			if ok {
 				// Found in cache, add to the final map
@@ -270,7 +270,7 @@ func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(scanId string, inclu
 		err = client.GetVulnerabilityDescriptions(&s.Configuration.AnchoreClientConfig, &vulns)
 		if err != nil {
 			//Return without desc
-			log.Printf("could not get vulnerability metadata for populating descriptions due to error %v", err)
+			log.WithField("err", err).Warn("could not get vulnerability metadata for populating descriptions due to error")
 		}
 
 		// Pivot to a map for next call
@@ -381,15 +381,24 @@ func (s *HarborScannerAdapter) ToHarborScanResult(repo string, srs anchore.Image
 	var maxSev = harbor.SevNone
 	var sev harbor.Severity
 	var err error
-	//
+	var description string
+	var ok bool
+
 	for i, v := range srs.Vulnerabilities {
 		sev = harbor.ToHarborSeverity(v.Severity)
-		description, ok := vulnDescriptions[v.VulnerabilityID]
+
+		if vulnDescriptions != nil {
+			description, ok = vulnDescriptions[v.VulnerabilityID]
+		} else {
+			// Fall thru if no descriptions available
+			description = ""
+			ok = false
+		}
 
 		if !ok || description == "" {
 			description, err = ToHarborDescription(&v)
 			if err != nil {
-				log.Printf("could not format harbor description from vuln cvss data %v", err)
+				log.WithField("err", err).Warn("could not format harbor description from vuln cvss data")
 			}
 		}
 
