@@ -86,11 +86,8 @@ The configuration file must be json formatted.
 
 ```
 {
-  "endpoint": "http://anchore-anchore-engine-api.default.svc.cluster.local:8228",
   "username": "harbor",
   "password": "harboruserpass123",
-  "timeoutSeconds": 10,
-  "filterVendorIgnoredVulns": false
 } 
 ```
 

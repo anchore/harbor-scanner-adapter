@@ -8,19 +8,20 @@ import (
 
 // Test loading the config from a file
 func TestFileConfigLoad(t *testing.T) {
-	if os.Setenv(AuthConfigFile, "fixtures/config_test.json") != nil {
-		log.Printf("Could not set env for path")
-		t.Fail()
+	// Set this as its required for config load to succeed.
+	if os.Setenv(EndpointEnvVarName, "https://somehost:8228") != nil {
+		t.Fatal("Could not set env endpoint")
 	}
+
+	if os.Setenv(AuthConfigFile, "fixtures/config_test.json") != nil {
+		t.Fatal("Could not set env for path")
+	}
+
 
 	cfg, err := GetConfig()
 	if err != nil || (cfg == AdapterConfig{}) {
 		log.Printf("Could not load config from file: %v", err)
 		t.Fail()
-	}
-
-	if cfg.AnchoreClientConfig.Endpoint != "https://someserver.somewhere:8228" {
-		t.Errorf("wrong endpoint")
 	}
 
 	if cfg.AnchoreClientConfig.Username != "harbortester" {
