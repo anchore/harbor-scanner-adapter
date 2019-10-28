@@ -128,7 +128,7 @@ func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]an
 		namespaces := make(map[string]bool)
 
 		if start < 0 || end > count+1 {
-			log.WithFields(log.Fields{"start": start, "end": end}).Error("vulnerabiilty description chunking returned out-of-bounds indexes. this should not happen")
+			log.WithFields(log.Fields{"start": start, "end": end}).Error("vulnerability description chunking returned out-of-bounds indexes. this should not happen")
 			return fmt.Errorf("error generating vulnerability descriptions")
 		}
 
