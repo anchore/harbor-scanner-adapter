@@ -14,9 +14,21 @@ func TestFileConfigLoad(t *testing.T) {
 	}
 
 	cfg, err := GetConfig()
-	if err != nil || cfg == nil {
+	if err != nil || (cfg == AdapterConfig{}) {
 		log.Printf("Could not load config from file: %v", err)
 		t.Fail()
+	}
+
+	if cfg.AnchoreClientConfig.Endpoint != "https://someserver.somewhere:8228" {
+		t.Errorf("wrong endpoint")
+	}
+
+	if cfg.AnchoreClientConfig.Username != "harbortester" {
+		t.Errorf("wrong username")
+	}
+
+	if cfg.AnchoreClientConfig.Password != "harbortesterpasser" {
+		t.Errorf("wrong password")
 	}
 }
 
@@ -33,7 +45,7 @@ func TestEnvConfig(t *testing.T) {
 		log.Printf("Error loading config")
 		t.Fail()
 	}
-	if conf == nil {
+	if conf == (AdapterConfig{}) {
 		log.Printf("Config is nil")
 		t.Fail()
 	}

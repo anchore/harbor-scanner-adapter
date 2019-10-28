@@ -75,6 +75,7 @@ var DefaultCacheConfig = CacheConfiguration{
 	DbUpdatedCacheTTL:            DefaultDbUpdateCacheTTL,
 	VulnReportCacheEnabled:       DefaultReportCacheEnabled,
 	VulnReportCacheMaxCount:      DefaultReportCacheItemCount,
+	VulnReportCacheTTL:           DefaultReportCacheTTL,
 }
 
 // Simple env var handler to ensure consistent behavior for booleans

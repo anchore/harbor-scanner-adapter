@@ -1,7 +1,6 @@
 package anchore
 
 import (
-	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
 	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
 	"sync"
@@ -61,14 +60,14 @@ func (c *LockingTTLCache) Get(key string) (interface{}, bool) {
 		if entry, ok := c.Cache.Get(key); ok {
 			// Check the time
 			age := time.Since(entry.(TimestampedEntry).CachedAt)
-			if age > c.TTL*time.Second {
+			if age > c.TTL {
 				// expired, remove
 				log.WithFields(log.Fields{"age": age, "key": key}).Debug("expired entry")
 				c.Cache.Remove(key)
 			} else {
 				log.WithFields(log.Fields{"age": age, "key": key}).Debug("expired entry")
 				// ok, return
-				return entry.(TimestampedEntry).Object.(anchore.ImageVulnerabilityReport), true
+				return entry.(TimestampedEntry).Object, true
 			}
 		}
 	}

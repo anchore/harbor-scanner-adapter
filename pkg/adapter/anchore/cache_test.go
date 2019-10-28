@@ -9,28 +9,41 @@ import (
 )
 
 // Db update cache tests
-func TestCacheDBUpdate(t *testing.T) {
-	defer FlushDbUpdateCache()
-	testT := time.Now()
-	CacheDBUpdate(testT)
+func TestUpdateTimestmapCache(t *testing.T) {
+	err := InitCaches(DefaultCacheConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if dbUpdateCached.IsZero() {
+	defer UpdateTimestampCache.Flush()
+	testT := time.Now()
+	UpdateTimestampCache.Add("db", testT)
+
+	if UpdateTimestampCache.Cache.Len() == 0 {
+		t.Fatal("not cached")
+	}
+
+	if _, ok := UpdateTimestampCache.Get("db"); !ok {
 		t.Fatal("not cached")
 	}
 }
 
 func TestGetCachedDbUpdateTime(t *testing.T) {
-	defer FlushDbUpdateCache()
+	err := InitCaches(DefaultCacheConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer UpdateTimestampCache.Flush()
 
-	_, ok := GetCachedDbUpdateTime()
+	_, ok := UpdateTimestampCache.Get("db")
 	if ok {
 		t.Fatal("Found cached db time, but no value should be found")
 	}
 
 	testT := time.Now()
-	CacheDBUpdate(testT)
+	UpdateTimestampCache.Add("db", testT)
 
-	if t2, ok := GetCachedDbUpdateTime(); !ok {
+	if t2, ok := UpdateTimestampCache.Get("db"); !ok {
 		t.Fatal("not cached")
 	} else {
 		if t2 != testT {
@@ -40,15 +53,19 @@ func TestGetCachedDbUpdateTime(t *testing.T) {
 }
 
 func TestFlushDBUpdateCache(t *testing.T) {
-	defer FlushDbUpdateCache()
+	err := InitCaches(DefaultCacheConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer UpdateTimestampCache.Flush()
 	testT := time.Now()
-	CacheDBUpdate(testT)
-	foundT, ok := GetCachedDbUpdateTime()
+	UpdateTimestampCache.Add("db",testT)
+	foundT, ok := UpdateTimestampCache.Get("db")
 	if !ok || foundT != testT {
 		t.Fail()
 	}
-	FlushDbUpdateCache()
-	_, ok = GetCachedDbUpdateTime()
+	UpdateTimestampCache.Flush()
+	_, ok = UpdateTimestampCache.Get("db")
 	if ok {
 		t.Fail()
 	}
@@ -56,7 +73,11 @@ func TestFlushDBUpdateCache(t *testing.T) {
 
 // Vuln description cache tests
 func TestGetCachedVulnDescription(t *testing.T) {
-	defer FlushVulnDescriptionCache()
+	err := InitCaches(DefaultCacheConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer DescriptionCache.Flush()
 	desc1 := anchore.NamespacedVulnerability{
 		ID:          "cve123",
 		Namespace:   "debian:8",
@@ -69,12 +90,12 @@ func TestGetCachedVulnDescription(t *testing.T) {
 		Description: "",
 	}
 
-	CacheVulnDescription(desc1)
-	if vulnDescriptionCache.Len() != 1 {
-		t.Fatal("cache length is not one", vulnDescriptionCache.Len())
+	DescriptionCache.Add(desc1.ID, desc1.Description)
+	if DescriptionCache.Cache.Len() != 1 {
+		t.Fatal("cache length is not one", DescriptionCache.Cache.Len())
 	}
 
-	r, ok := GetCachedVulnDescription(desc2)
+	r, ok := DescriptionCache.Get(desc2.ID)
 	if !ok {
 		t.Fatal("not found, should have been found")
 	}
@@ -85,18 +106,22 @@ func TestGetCachedVulnDescription(t *testing.T) {
 }
 
 func TestCacheVulnDescription(t *testing.T) {
-	defer FlushVulnDescriptionCache()
+	err := InitCaches(DefaultCacheConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer DescriptionCache.Flush()
 	desc1 := anchore.NamespacedVulnerability{
 		ID:          "cve123",
 		Namespace:   "debian:8",
 		Description: "some description worth noting",
 	}
 
-	CacheVulnDescription(desc1)
+	DescriptionCache.Add(desc1.ID, desc1.Description)
 
-	FlushVulnDescriptionCache()
+	DescriptionCache.Flush()
 
-	_, ok := GetCachedVulnDescription(desc1)
+	_, ok := DescriptionCache.Get(desc1.ID)
 	if ok {
 		t.Fatal("should not get value after flush")
 	}
@@ -105,27 +130,29 @@ func TestCacheVulnDescription(t *testing.T) {
 
 func TestCacheVulnDescriptionTimeout(t *testing.T) {
 	t.SkipNow()
-	defer FlushVulnDescriptionCache()
+	err := InitCaches(DefaultCacheConfig)
+	testTTL := time.Duration(3 * time.Second)
+	DescriptionCache.TTL = testTTL
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer DescriptionCache.Flush()
 	desc1 := anchore.NamespacedVulnerability{
 		ID:          "cve123",
 		Namespace:   "debian:8",
 		Description: "some description worth noting",
 	}
 
-	CacheVulnDescription(desc1)
-	sleepDuration := time.Second * (DefaultVulnReportCacheTimeoutSeconds + 1)
-	t.Log("Sleeping to test ttl: ", DefaultVulnReportCacheTimeoutSeconds+1)
+	DescriptionCache.Add("cve123", desc1)
+	sleepDuration := (testTTL + 1)
+	t.Log("Sleeping to test ttl: ", testTTL + 1)
 	time.Sleep(sleepDuration)
 
-	_, ok := GetCachedVulnDescription(anchore.NamespacedVulnerability{
-		ID:          "cve123",
-		Namespace:   "debian:8",
-		Description: "",
-	})
+	_, ok := DescriptionCache.Get("cve123")
 	if ok {
 		t.Fatal("should not get value after timeout")
 	}
-	if vulnDescriptionCache.Len() > 0 {
+	if DescriptionCache.Cache.Len() > 0 {
 		t.Fatal("should not have any cached entries after ttl + request")
 	}
 
@@ -134,6 +161,10 @@ func TestCacheVulnDescriptionTimeout(t *testing.T) {
 // Test for manual checks of memory usage for various sizes of data
 func TestVulnDescriptionCacheSize(t *testing.T) {
 	t.SkipNow()
+	err := InitCaches(DefaultCacheConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var tmp = make([]byte, 1000)
 
 	for i := 0; i < 10000; i++ {
@@ -144,7 +175,7 @@ func TestVulnDescriptionCacheSize(t *testing.T) {
 
 		desc := base64.StdEncoding.EncodeToString(tmp)
 
-		CacheVulnDescription(anchore.NamespacedVulnerability{
+		DescriptionCache.Add("id" + string(i), anchore.NamespacedVulnerability{
 			ID:          "cve-" + string(i),
 			Namespace:   "debian:9",
 			Description: desc,
@@ -155,40 +186,48 @@ func TestVulnDescriptionCacheSize(t *testing.T) {
 
 // Vuln report cache tests
 func TestGetCachedVulnReport(t *testing.T) {
-	defer FlushVulnReportCache()
+	err := InitCaches(DefaultCacheConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ReportCache.Flush()
 
-	CacheVulnReport("digest123", anchore.ImageVulnerabilityReport{
+	ReportCache.Add("digest123", anchore.ImageVulnerabilityReport{
 		ImageDigest:     "digest123",
 		Vulnerabilities: nil,
 	})
 
-	if vulnReportCache.Len() != 1 {
-		t.Fatal("cache length is not one", vulnReportCache.Len())
+	t.Log("TTL: ", ReportCache.TTL)
+	if ReportCache.Cache.Len() != 1 {
+		t.Fatal("cache length is not one", ReportCache.Cache.Len())
 	}
 
-	r, ok := GetCachedVulnReport("digest123")
+	r, ok := ReportCache.Get("digest123")
 	if !ok {
 		t.Fatal("not found, should have been found")
 	}
 
-	if r.ImageDigest != "digest123" {
+	if r.(anchore.ImageVulnerabilityReport).ImageDigest != "digest123" {
 		t.Fatal("wrong result:", r)
 	}
 }
 
 func TestCacheVulnReport(t *testing.T) {
-	defer FlushVulnReportCache()
+	err := InitCaches(DefaultCacheConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ReportCache.Flush()
 
-	CacheVulnReport("digest123", anchore.ImageVulnerabilityReport{
+	ReportCache.Add("digest123", anchore.ImageVulnerabilityReport{
 		ImageDigest:     "digest123",
 		Vulnerabilities: nil,
 	})
 
-	FlushVulnReportCache()
+	ReportCache.Flush()
 
-	_, ok := GetCachedVulnReport("digest123")
+	_, ok := ReportCache.Get("digest123")
 	if ok {
 		t.Fatal("should not get value after flush")
 	}
-
 }
