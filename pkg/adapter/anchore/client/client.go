@@ -431,13 +431,12 @@ func ExtractRegistryFromUrl(registryUrl string) (string, error) {
 
 // Return the registry credential entry as anchore will use it. This is the registry url minus the scheme + / + repository name
 func RegistryNameFromRepo(registryUrl string, repository string) (string, error) {
-	u, err := url.Parse(registryUrl)
+	reg, err := ExtractRegistryFromUrl(registryUrl)
 	if err != nil {
 		return "", err
 	}
 
-	u.Path = repository
-	return u.String(), nil
+	return fmt.Sprintf("%v/%v", reg, repository), nil
 }
 
 // Build the request URL
@@ -452,9 +451,9 @@ func buildUrl(config ClientConfig, requestPathTemplate string, args []interface{
 }
 
 // Add a new registry credential to anchore
-func AddRegistryCredential(clientConfiguration *ClientConfig, registry string, repository string, username string, password string, registryTLSVerify bool, validateCreds bool) (gorequest.Response, []byte, []error) {
+func AddRegistryCredential(clientConfiguration *ClientConfig, registryUrl string, repository string, username string, password string, registryTLSVerify bool, validateCreds bool) (gorequest.Response, []byte, []error) {
 	request := getNewRequest(clientConfiguration)
-	registryName, err := RegistryNameFromRepo(registry, repository)
+	registryName, err := RegistryNameFromRepo(registryUrl, repository)
 	if err != nil {
 		return nil, nil, []error{err}
 	}
@@ -466,15 +465,15 @@ func AddRegistryCredential(clientConfiguration *ClientConfig, registry string, r
 
 	var payload = fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password, registryTLSVerify)
 
-	return request.Post(registryAddUrl).Set("Content-Type", "application/json").Param("validate", strconv.FormatBool(validateCreds)).Send(payload).EndBytes()
+	return sendRequest(request.Post(registryAddUrl).Set("Content-Type", "application/json").Param("validate", strconv.FormatBool(validateCreds)).Send(payload))
 }
 
 // Update an existing credential record
-func UpdateRegistryCredential(clientConfiguration *ClientConfig, registry string, repository string, username string, password string, registryTLSVerify bool, validateCreds bool) (gorequest.Response, []byte, []error) {
+func UpdateRegistryCredential(clientConfiguration *ClientConfig, registryUrl string, repository string, username string, password string, registryTLSVerify bool, validateCreds bool) (gorequest.Response, []byte, []error) {
 	request := getNewRequest(clientConfiguration)
-	registryName, err := RegistryNameFromRepo(registry, repository)
+	registryName, err := RegistryNameFromRepo(registryUrl, repository)
 	if err != nil {
-		log.WithField("err", err).Error("cannot update pull credential due to registry name construction failing")
+		log.WithField("err", err).Error("cannot update pull credential due to registryUrl name construction failing")
 		return nil, nil, []error{err}
 	}
 
@@ -483,12 +482,12 @@ func UpdateRegistryCredential(clientConfiguration *ClientConfig, registry string
 		return nil, nil, []error{err}
 	}
 
-	u.Path = path.Join(u.Path, fmt.Sprintf(RegistryCredentialUpdateURLTemplate, url.PathEscape(registryName)))
+	// Use query escape instead of path to ensure that ':' is encoded for ports. This not quite spec, but Anchore API expects it to be encoded
+	u.Path = path.Join(u.Path, fmt.Sprintf(RegistryCredentialUpdateURLTemplate, registryName))
 
 	var payload = fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password, registryTLSVerify)
 
-	log.Debug("Updating creds that already exist for this repo")
-	return request.Put(u.String()).Set("Content-Type", "application/json").Param("validate", strconv.FormatBool(validateCreds)).Send(payload).EndBytes()
+	return sendRequest(request.Put(u.String()).Set("Content-Type", "application/json").Param("validate", strconv.FormatBool(validateCreds)).Send(payload))
 }
 
 func logResponse(resp gorequest.Response, body []byte, errs []error) (gorequest.Response, []byte, []error) {

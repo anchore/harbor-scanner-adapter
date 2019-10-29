@@ -126,9 +126,9 @@ func GetUsernamePassword(authorizationInput string) (string, string, error) {
 }
 
 // Add credentials to Anchore for authorizing the image fetch
-func (s *HarborScannerAdapter) EnsureRegistryCredentials(registry string, repository string, username string, password string) error {
+func (s *HarborScannerAdapter) EnsureRegistryCredentials(registryUrl string, repository string, username string, password string) error {
 	// New method, using client
-	resp, body, errs := client.AddRegistryCredential(&s.Configuration.AnchoreClientConfig, registry, repository, username, password, s.Configuration.RegistryTLSVerify, s.Configuration.RegistryValidateCreds)
+	resp, body, errs := client.AddRegistryCredential(&s.Configuration.AnchoreClientConfig, registryUrl, repository, username, password, s.Configuration.RegistryTLSVerify, s.Configuration.RegistryValidateCreds)
 	if errs != nil {
 		log.WithField("errs", errs).Error("could not execute request to anchore api to add registry credential")
 		return errs[0]
@@ -147,23 +147,23 @@ func (s *HarborScannerAdapter) EnsureRegistryCredentials(registry string, reposi
 			log.WithField("msg", anchoreError.Message).Debug("updating registry credential since one already exists")
 
 			// Do update
-			resp, body, errs = client.UpdateRegistryCredential(&s.Configuration.AnchoreClientConfig, registry, repository, username, password, s.Configuration.RegistryTLSVerify, s.Configuration.RegistryValidateCreds)
+			resp, body, errs = client.UpdateRegistryCredential(&s.Configuration.AnchoreClientConfig, registryUrl, repository, username, password, s.Configuration.RegistryTLSVerify, s.Configuration.RegistryValidateCreds)
 			if errs != nil {
 				log.WithField("errs", errs).Error("could not execute request to anchore api to update registry credential")
 				return errs[0]
 			}
 			if resp.StatusCode != http.StatusOK {
-				log.WithFields(log.Fields{"errorMessage": anchoreError.Message, "registry": registry, "repository": repository}).Error("unexpected response from anchore api. credential update not successful")
+				log.WithFields(log.Fields{"errorMessage": anchoreError.Message, "registry": registryUrl, "repository": repository}).Error("unexpected response from anchore api. credential update not successful")
 				return fmt.Errorf("unexpected response on registry credential update from anchore api: %v", resp.StatusCode)
 			}
 		} else {
-			log.WithFields(log.Fields{"errorMessage": anchoreError.Message, "registry": registry, "repository": repository}).Error("unexpected response from anchore api. could not determine if update action is appropriate")
+			log.WithFields(log.Fields{"errorMessage": anchoreError.Message, "registry": registryUrl, "repository": repository}).Error("unexpected response from anchore api. could not determine if update action is appropriate")
 			return fmt.Errorf("unexpected response from anchore api")
 		}
 	} else if resp.StatusCode != http.StatusOK {
 		// More handling
-		log.WithFields(log.Fields{"receivedResponse": body, "receivedStatusCode": resp.StatusCode}).Error("unexpected error response from anchore adding registry credential")
-		return fmt.Errorf("failed to ensure credentials")
+		log.WithFields(log.Fields{"receivedResponse": string(body), "receivedStatusCode": resp.StatusCode}).Error("unexpected error response from anchore adding registry credential")
+		return fmt.Errorf("failed to add valid credentials to anchore for registry")
 	}
 
 	log.Debug("successfully added registry credential to anchore")
@@ -176,12 +176,6 @@ func (s *HarborScannerAdapter) Scan(req harbor.ScanRequest) (harbor.ScanResponse
 		return harbor.ScanResponse{}, err
 	}
 
-	var registry string
-	registry, err = client.ExtractRegistryFromUrl(req.Registry.URL)
-	if err != nil {
-		return harbor.ScanResponse{}, err
-	}
-
 	if req.Registry.Authorization != "" {
 		username, password, err2 := GetUsernamePassword(req.Registry.Authorization)
 		if err2 != nil {
@@ -189,7 +183,7 @@ func (s *HarborScannerAdapter) Scan(req harbor.ScanRequest) (harbor.ScanResponse
 		}
 
 		// Add the credentials for the repository to be scanned
-		err = s.EnsureRegistryCredentials(registry, req.Artifact.Repository, username, password)
+		err = s.EnsureRegistryCredentials(req.Registry.URL, req.Artifact.Repository, username, password)
 		if err != nil {
 			return harbor.ScanResponse{}, err
 		}
