@@ -91,8 +91,7 @@ func AnalyzeImage(clientConfiguration *ClientConfig, analyzeRequest anchore.Imag
 
 	log.WithFields(log.Fields{"method": "post", "url": reqUrl}).Debug("sending request to anchore api")
 	// call API get the full report until "analysis_status" = "analyzed"
-	resp, _, errs := request.Post(reqUrl).Set("Content-Type", "application/json").Send(analyzeRequest).EndBytes()
-	checkStatusStruct(resp, errs)
+	resp, _, errs := sendRequest(request.Post(reqUrl).Set("Content-Type", "application/json").Send(analyzeRequest))
 	if errs != nil {
 		log.Errorf("could not contact anchore api")
 		return errs[0]
@@ -133,7 +132,7 @@ func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]an
 		}
 
 		chunkToProcess := (*vulns)[start:end]
-		log.WithFields(log.Fields{"total": count, "start": start, "end": end, "size": len(chunkToProcess)}).Debug("processing chunk of the vuln list")
+		log.WithFields(log.Fields{"total": count, "start": start, "end": end, "size": len(chunkToProcess)}).Trace("processing chunk of the vuln list")
 		for i, v := range chunkToProcess {
 			vulnIds[i] = v.ID
 			namespaces[v.Namespace] = true
@@ -184,7 +183,7 @@ func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]an
 
 		// update each with rules
 		if rec, ok := vulnDescriptionMap[vulnRecord.ID]; !ok {
-			log.WithFields(log.Fields{"ID": vulnRecord.ID, "Namespace": vulnRecord.Namespace}).Debug("warning: could not find vuln record in anchore api results for querying vuln descriptions")
+			log.WithFields(log.Fields{"vulnerabilityId": vulnRecord.ID, "namespace": vulnRecord.Namespace}).Debug("no vulnerability record in anchore api vulnerability metadata query results")
 			continue
 		} else {
 
@@ -198,13 +197,13 @@ func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]an
 			}
 
 			if foundDescription == "" {
-				log.Debugf("no Description found for ID %v", vulnRecord.ID)
+				log.WithField("vulnerabilityId", vulnRecord.ID).Trace("no description found for vulnerability")
 			} else {
 				if vulnRecord.Description == "" {
-					log.Debugf("updating vuln Description for %v", vulnRecord.ID)
+					log.WithField("vulnerabilityId", vulnRecord.ID).Trace("updating vulnerability description in response report")
 					vulnRecord.Description = foundDescription
 				} else {
-					log.Debugf("vuln already has Description, skipping update")
+					log.WithField("vulnerabilityId", vulnRecord.ID).Trace("vulnerability already has description, skipping update")
 				}
 			}
 		}
@@ -240,13 +239,10 @@ func QueryVulnerabilityRecords(clientConfiguration *ClientConfig, ids []string, 
 
 		req := request.Get(reqUrl).Param("id", vulnIdsStr).Param("namespace", namespaceStr)
 		if page != "" {
-			log.Debug("getting page ", page)
 			req = req.Param("page", page)
 		}
 
-		log.WithFields(log.Fields{"id": vulnIdsStr, "namespace": namespaceStr, "page": page}).Debugf("vulnerability query parameters")
-		resp, body, errs := req.EndBytes()
-
+		resp, body, errs := sendRequest(req)
 		if errs != nil {
 			return vulnListing, errs
 		} else {
@@ -272,7 +268,7 @@ func QueryVulnerabilityRecords(clientConfiguration *ClientConfig, ids []string, 
 				// Merge the counts so the response to caller looks like the result of a single call
 				vulnListing.ReturnedCount += vulnPage.ReturnedCount
 			} else {
-				log.WithFields(log.Fields{"status": resp.StatusCode}).Errorf("got non 200 response from server for vuln query: %s", body)
+				log.WithFields(log.Fields{"status": resp.StatusCode, "body": string(body), "url": resp.Request.URL}).Errorf("got non 200 response from server for vuln query")
 				return vulnListing, []error{fmt.Errorf("error response from server")}
 			}
 		}
@@ -314,7 +310,7 @@ func GetImageVulnerabilities(clientConfiguration *ClientConfig, digest string, f
 	}
 
 	request := getNewRequest(clientConfiguration)
-	resp, body, errs := request.Get(reqUrl).Param("vendor_only", strconv.FormatBool(filterIgnored)).EndBytes()
+	resp, body, errs := sendRequest(request.Get(reqUrl).Param("vendor_only", strconv.FormatBool(filterIgnored)))
 	if errs != nil {
 		return imageVulnerabilityReport, errs[0]
 	}
@@ -344,8 +340,7 @@ func GetImage(clientConfiguration *ClientConfig, digest string) (anchore.ImageLi
 
 	log.WithFields(log.Fields{"method": "get", "url": reqUrl}).Debug("sending request to anchore api")
 	// call API get the full report until "analysis_status" = "analyzed"
-	resp, body, errs := request.Get(reqUrl).EndBytes()
-	checkStatusStruct(resp, errs)
+	_, body, errs := sendRequest(request.Get(reqUrl))
 	if errs != nil {
 		log.Errorf("could not contact anchore api")
 		return imageList, errs[0]
@@ -366,12 +361,10 @@ func GetVulnDbUpdateTime(clientConfiguration *ClientConfig) (time.Time, error) {
 		return time.Time{}, err
 	}
 
-	resp, body, errs := request.Get(reqUrl).EndBytes()
+	_, body, errs := sendRequest(request.Get(reqUrl))
 	if errs != nil {
 		return time.Time{}, errs[0]
 	}
-	checkStatusStruct(resp, errs)
-
 	feedsResp := anchore.FeedStatuses{}
 
 	err = json.Unmarshal(body, &feedsResp)
@@ -498,7 +491,7 @@ func UpdateRegistryCredential(clientConfiguration *ClientConfig, registry string
 	return request.Put(u.String()).Set("Content-Type", "application/json").Param("validate", strconv.FormatBool(validateCreds)).Send(payload).EndBytes()
 }
 
-func checkStatusStruct(resp gorequest.Response, errs []error) {
+func logResponse(resp gorequest.Response, body []byte, errs []error) (gorequest.Response, []byte, []error) {
 	if errs != nil {
 		if resp != nil {
 			log.WithFields(log.Fields{"status": resp.Status, "statusCode": resp.StatusCode, "errs": errs}).Error("error response from anchore")
@@ -506,6 +499,27 @@ func checkStatusStruct(resp gorequest.Response, errs []error) {
 			log.WithFields(log.Fields{"resp": "nil", "errs": errs}).Error("error response from anchore")
 		}
 	} else {
-		log.WithFields(log.Fields{"status": resp.StatusCode}).Debug("got response")
+		log.WithFields(log.Fields{
+			"requestURL": resp.Request.URL,
+			"requestMethod": resp.Request.Method,
+			"statusCode": resp.StatusCode,
+			"contentLength": resp.ContentLength,
+			"status": resp.Status,
+			"contentType": resp.Header.Get("Content-Type")}).Debug("anchore API response")
+		log.WithFields(log.Fields{"statusCode": resp.StatusCode, "body": string(body)}).Trace("anchore API response content")
 	}
+
+	return resp, body, errs
+}
+
+// Logging wrapper for sending a request
+func sendRequest(req *gorequest.SuperAgent) (gorequest.Response, []byte, []error) {
+	t := time.Now()
+	log.WithFields(log.Fields{
+		"URL": req.Url,
+		"method": req.Method,
+		}).Debug("sending request")
+	resp, body, errs := req.EndBytes()
+	log.WithField("duration", time.Now().Sub(t)).Debug("api call duration")
+	return logResponse(resp, body, errs)
 }

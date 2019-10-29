@@ -162,8 +162,8 @@ func (s *HarborScannerAdapter) EnsureRegistryCredentials(registry string, reposi
 		}
 	} else if resp.StatusCode != http.StatusOK {
 		// More handling
-		log.Error("unexpected error response from anchore adding registry credential")
-		return fmt.Errorf("failed to add credential got response code %v", resp.StatusCode)
+		log.WithFields(log.Fields{"receivedResponse": body, "receivedStatusCode": resp.StatusCode}).Error("unexpected error response from anchore adding registry credential")
+		return fmt.Errorf("failed to ensure credentials")
 	}
 
 	log.Debug("successfully added registry credential to anchore")
@@ -312,10 +312,10 @@ func (s *HarborScannerAdapter) GetAnchoreVulnReport(digest string) (anchore.Imag
 		case "analyzed":
 			log.Debug("found analyzed image")
 		case "analysis_failed":
-			log.Debug("failed analysis")
-			return anchore.ImageVulnerabilityReport{}, fmt.Errorf("scan failed")
+			log.Debug("analysis failed")
+			return anchore.ImageVulnerabilityReport{}, fmt.Errorf("analysis failed")
 		default:
-			log.Debug("Pending analysis")
+			log.Debug("analysis pending")
 			return anchore.ImageVulnerabilityReport{}, fmt.Errorf("analysis pending")
 		}
 	}
