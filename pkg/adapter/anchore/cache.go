@@ -62,10 +62,10 @@ func (c *LockingTTLCache) Get(key string) (interface{}, bool) {
 			age := time.Since(entry.(TimestampedEntry).CachedAt)
 			if age > c.TTL {
 				// expired, remove
-				log.WithFields(log.Fields{"age": age, "key": key}).Debug("expired entry")
+				log.WithFields(log.Fields{"age": age, "key": key, "ttl": c.TTL}).Trace("expired cache entry")
 				c.Cache.Remove(key)
 			} else {
-				log.WithFields(log.Fields{"age": age, "key": key}).Debug("expired entry")
+				log.WithFields(log.Fields{"age": age, "key": key, "ttl": c.TTL}).Trace("valid cache entry")
 				// ok, return
 				return entry.(TimestampedEntry).Object, true
 			}
