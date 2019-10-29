@@ -499,12 +499,12 @@ func logResponse(resp gorequest.Response, body []byte, errs []error) (gorequest.
 		}
 	} else {
 		log.WithFields(log.Fields{
-			"requestURL": resp.Request.URL,
+			"requestURL":    resp.Request.URL,
 			"requestMethod": resp.Request.Method,
-			"statusCode": resp.StatusCode,
+			"statusCode":    resp.StatusCode,
 			"contentLength": resp.ContentLength,
-			"status": resp.Status,
-			"contentType": resp.Header.Get("Content-Type")}).Debug("anchore API response")
+			"status":        resp.Status,
+			"contentType":   resp.Header.Get("Content-Type")}).Debug("anchore API response")
 		log.WithFields(log.Fields{"statusCode": resp.StatusCode, "body": string(body)}).Trace("anchore API response content")
 	}
 
@@ -515,9 +515,9 @@ func logResponse(resp gorequest.Response, body []byte, errs []error) (gorequest.
 func sendRequest(req *gorequest.SuperAgent) (gorequest.Response, []byte, []error) {
 	t := time.Now()
 	log.WithFields(log.Fields{
-		"URL": req.Url,
+		"URL":    req.Url,
 		"method": req.Method,
-		}).Debug("sending request")
+	}).Debug("sending request")
 	resp, body, errs := req.EndBytes()
 	log.WithField("duration", time.Now().Sub(t)).Debug("api call duration")
 	return logResponse(resp, body, errs)

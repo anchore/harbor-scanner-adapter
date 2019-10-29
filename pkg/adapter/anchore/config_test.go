@@ -17,7 +17,6 @@ func TestFileConfigLoad(t *testing.T) {
 		t.Fatal("Could not set env for path")
 	}
 
-
 	cfg, err := GetConfig()
 	if err != nil || (cfg == AdapterConfig{}) {
 		log.Printf("Could not load config from file: %v", err)

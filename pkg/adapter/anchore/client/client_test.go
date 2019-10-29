@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	RegistryCredAddSuccess         = `
+	RegistryCredAddSuccess = `
 		[
 			{
 				"created_at": "2019-10-28T18:43:59Z",
@@ -20,7 +20,7 @@ const (
 				"userId": "admin"
 			}
 		]`
-	RegistryCredAddFailsExists     = `
+	RegistryCredAddFailsExists = `
 		{
 			"detail": {
 				"error_codes": []
@@ -32,7 +32,7 @@ const (
 	GenericErrorResponse           = ""
 	RegistryCredUpdateSuccess      = ""
 	RegistryCredUpdateFailNotFound = ""
-	RegistryCredAddValidateFailed      = `
+	RegistryCredAddValidateFailed  = `
 		{
 			"detail": {
 				"error_codes": []
@@ -40,7 +40,7 @@ const (
 			"httpcode": 406,
 			"message": "cannot ping supplied registry with supplied credentials - exception: failed check to access registry (https://harbor:8443,robot) - exception: HTTPSConnectionPool(host='harbor', port=8443): Max retries exceeded with url: /v2/ (Caused by SSLError(SSLError(\"bad handshake: Error([('SSL routines', 'tls_process_server_certificate', 'certificate verify failed')],)\",),))"
 		}`
-	AddImageSuccess                = `
+	AddImageSuccess = `
 		[
 			{
 				"analysis_status": "analyzed",
@@ -82,7 +82,7 @@ const (
 				"userId": "admin"
 			}
 		]`
-	AddImageFailedSkopeoBadCreds   = `
+	AddImageFailedSkopeoBadCreds = `
 		{
 			"detail": {
 				"error_codes": [
@@ -93,7 +93,7 @@ const (
 			"httpcode": 400,
 			"message": "cannot fetch image digest/manifest from registry"
 		}`
-	AddImageFailedSkopeoNotFound   = `
+	AddImageFailedSkopeoNotFound = `
 		{
 			"detail": {
 				"error_codes": [

@@ -59,7 +59,7 @@ func TestFlushDBUpdateCache(t *testing.T) {
 	}
 	defer UpdateTimestampCache.Flush()
 	testT := time.Now()
-	UpdateTimestampCache.Add("db",testT)
+	UpdateTimestampCache.Add("db", testT)
 	foundT, ok := UpdateTimestampCache.Get("db")
 	if !ok || foundT != testT {
 		t.Fail()
@@ -145,7 +145,7 @@ func TestCacheVulnDescriptionTimeout(t *testing.T) {
 
 	DescriptionCache.Add("cve123", desc1)
 	sleepDuration := (testTTL + 1)
-	t.Log("Sleeping to test ttl: ", testTTL + 1)
+	t.Log("Sleeping to test ttl: ", testTTL+1)
 	time.Sleep(sleepDuration)
 
 	_, ok := DescriptionCache.Get("cve123")
@@ -175,7 +175,7 @@ func TestVulnDescriptionCacheSize(t *testing.T) {
 
 		desc := base64.StdEncoding.EncodeToString(tmp)
 
-		DescriptionCache.Add("id" + string(i), anchore.NamespacedVulnerability{
+		DescriptionCache.Add("id"+string(i), anchore.NamespacedVulnerability{
 			ID:          "cve-" + string(i),
 			Namespace:   "debian:9",
 			Description: desc,
