@@ -276,10 +276,10 @@ func GetConfig() (AdapterConfig, error) {
 		}
 	}
 
-	cfg.CacheConfig.VulnDescriptionCacheEnabled, err = GetEnvBoolean(DbUpdateCacheEnabledEnvVarName, DefaultDbUpdateCacheEnabled)
+	cfg.CacheConfig.DbUpdateCacheEnabled, err = GetEnvBoolean(DbUpdateCacheEnabledEnvVarName, DefaultDbUpdateCacheEnabled)
 
 	if ttl, ok := os.LookupEnv(DbUpdateCacheTtl); ok {
-		cfg.CacheConfig.VulnDescriptionCacheMaxCount, err = strconv.Atoi(ttl)
+		cfg.CacheConfig.DbUpdatedCacheTTL, err = strconv.Atoi(ttl)
 		if err != nil {
 			log.WithFields(log.Fields{"value": ttl, "key": DbUpdateCacheTtl, "type": "int"}).Error("invalid format for environment variable value")
 			return cfg, err
