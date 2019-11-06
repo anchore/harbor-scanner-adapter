@@ -48,7 +48,7 @@ const (
 	PasswordEnvVarName                = "ANCHORE_PASSWORD"
 	AuthConfigFile                    = "ANCHORE_AUTHFILE_PATH"
 	TimeoutEnvVarName                 = "ANCHORE_CLIENT_TIMEOUT_SECONDS"
-	DescriptionCacheEnabledEnvVarName = "SCANNER_ADAPTER_VULN_DESCRIPTION_CACHE_ENABLED"
+	DescriptionCacheEnabledEnvVarName = "SCANNER_ADAPTER_DESCRIPTION_CACHE_ENABLED"
 	DescriptionCacheItemCount         = "SCANNER_ADAPTER_DESCRIPTION_CACHE_COUNT"
 	DescriptionCacheTtl               = "SCANNER_ADAPTER_DESCRIPTION_CACHE_TTL"
 	DefaultDescriptionCacheEnabled    = true
