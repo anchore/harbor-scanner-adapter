@@ -1,0 +1,43 @@
+env:
+  - GO111MODULE=on
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - id: build-anchore-adapter
+    main: ./cmd/anchore-adapter/main.go
+    binary: anchore-adapter
+    env:
+      - CGO_ENABLED=0
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      386: i386
+      amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+dockers:
+  - image_templates:
+      - "docker.io/anchore/harbor-scanner-adapter:{{ .Version }}"
+    goos: linux
+    goarch: amd64
+    binaries:
+      - anchore-adapter
+    build_flag_templates:
+      - "--label=org.label-schema.schema-version=1.0"
+      - "--label=org.label-schema.name={{ .ProjectName }}"
+      - "--label=org.label-schema.description=Harbor scanner adapter for Anchore"
+      - "--label=org.label-schema.vendor=Anchore"
+      - "--label=org.label-schema.version={{ .Version }}"
+      - "--label=org.label-schema.build-date={{ .Date }}"
+      - "--label=org.label-schema.vcs-ref={{ .FullCommit }}"
+      - "--label=org.label-schema.vcs=https://github.com/anchore/harbor-scanner-adapter"
