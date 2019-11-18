@@ -8,6 +8,6 @@ LABEL "source"="https://github.com/anchore/harbor-scanner-adapter"
 
 RUN apk update && apk add --no-cache curl bash ca-certificates && update-ca-certificates
 
-COPY bin/anchore-adapter /app/anchore-adapter
+COPY anchore-adapter /app/anchore-adapter
 
 ENTRYPOINT ["/app/anchore-adapter"]

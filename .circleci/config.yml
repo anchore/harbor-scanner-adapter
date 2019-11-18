@@ -2,6 +2,7 @@
 ---
 version: 2.1
 jobs:
+  build:
   unit_test:
     description: Run tests for formatting
     docker:
@@ -14,7 +15,7 @@ jobs:
       - run:
           name: Unit tests with Go
           command: make test
-  build:
+  build_image:
     docker:
       - image: circleci/golang:1
     steps:
@@ -50,37 +51,37 @@ jobs:
       - run:
           name: Login
           command: echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-      - run: |
-          # This is the content of https://git.io/goreleaser on 11/17/2019
+      - run:
+          name: Goreleaser
+          command: |
+            # This is the content of https://git.io/goreleaser on 11/17/2019
+            set -e
 
-          set -e
+            TAR_FILE="/tmp/goreleaser.tar.gz"
+            RELEASES_URL="https://github.com/goreleaser/goreleaser/releases"
+            test -z "$TMPDIR" && TMPDIR="$(mktemp -d)"
 
-          TAR_FILE="/tmp/goreleaser.tar.gz"
-          RELEASES_URL="https://github.com/goreleaser/goreleaser/releases"
-          test -z "$TMPDIR" && TMPDIR="$(mktemp -d)"
-
-          last_version() {
-            curl -sL -o /dev/null -w %{url_effective} "$RELEASES_URL/latest" |
-              rev |
-              cut -f1 -d'/'|
-              rev
-          }
-
-          download() {
-            test -z "$VERSION" && VERSION="$(last_version)"
-            test -z "$VERSION" && {
-              echo "Unable to get goreleaser version." >&2
-              exit 1
+            last_version() {
+              curl -sL -o /dev/null -w %{url_effective} "$RELEASES_URL/latest" |
+                rev |
+                cut -f1 -d'/'|
+                rev
             }
-            rm -f "$TAR_FILE"
-            curl -s -L -o "$TAR_FILE" \
-              "$RELEASES_URL/download/$VERSION/goreleaser_$(uname -s)_$(uname -m).tar.gz"
-          }
 
-          download
-          tar -xf "$TAR_FILE" -C "$TMPDIR"
-          "${TMPDIR}/goreleaser" "$@"
-      #- run: curl -sL https://git.io/goreleaser | bash
+            download() {
+              test -z "$VERSION" && VERSION="$(last_version)"
+              test -z "$VERSION" && {
+                echo "Unable to get goreleaser version." >&2
+                exit 1
+              }
+              rm -f "$TAR_FILE"
+              curl -s -L -o "$TAR_FILE" \
+                "$RELEASES_URL/download/$VERSION/goreleaser_$(uname -s)_$(uname -m).tar.gz"
+            }
+
+            download
+            tar -xf "$TAR_FILE" -C "$TMPDIR"
+            "${TMPDIR}/goreleaser" "$@"
 
 workflows:
   default:
@@ -89,18 +90,16 @@ workflows:
           filters:
             tags:
               only: /v[0-9]+(\.[0-9]+)*(-.*)*/
-
-      - build:
+      - build_image:
           requires:
             - unit_test
           filters:
             tags:
               only: /v[0-9]+(\.[0-9]+)*(-.*)*/
-
       - push_dev_image:
           context: dockerhub
           requires:
-            - build
+            - build_image
           filters:
             branches:
               only:
@@ -108,7 +107,7 @@ workflows:
       - release:
           context: dockerhub
           requires:
-            - build
+            - unit_test
           filters:
             branches:
               ignore: /.*/

@@ -9,6 +9,8 @@ builds:
     binary: anchore-adapter
     env:
       - CGO_ENABLED=0
+    goarch: 
+      - amd64
 archives:
   - replacements:
       darwin: Darwin
@@ -27,7 +29,7 @@ changelog:
       - '^test:'
 dockers:
   - image_templates:
-      - "docker.io/anchore/harbor-scanner-adapter:{{ .Version }}"
+      - "{{.Env.REPOSITORY}}:{{ .Version }}"
     goos: linux
     goarch: amd64
     binaries:
