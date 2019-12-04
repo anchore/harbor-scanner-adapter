@@ -60,34 +60,44 @@ environment variable values take precedent over values from the file.
 
 Adapter configuration values. These cannot be set in the client config file, only via environment variables.
 
-| Env Var | Description | Example Value |
-| --------|-------------|---------------|
-| SCANNER_ADAPTER_LISTEN_ADDR | The address for the scanner to listen on for API calls | ":8080" |
-| SCANNER_ADAPTER_APIKEY | A key value to enable authentication for the adapter API. If set, callers must provide this value as a bearer token in the Authorization header | 7d341116-99e4-4c9b-bd81-87cd4117e713 |
-| SCANNER_ADAPTER_FULL_VULN_DESCRIPTIONS | Bool to toggle off full descriptions for better performance | "false"|
-| SCANNER_ADAPTER_LOG_LEVEL | Log level for adapter | "info" |
-| SCANNER_ADAPTER_LOG_FORMAT | Log format, defaults to "text" unless "json" is specified | "json"
-
-Anchore client configuration (also available via a json file as below):
-
-| Env Var | Description | Example Value |
-| --------|-------------|---------------|
-| ANCHORE_AUTHFILE_PATH | The path to find the config file to load. No default, if omitted a file is not expected or used | /anchore_client.json |
-| ANCHORE_ENDPOINT | API endpoint for calls to Anchore  | http://localhost:8228 |
-| ANCHORE_USERNAME | Anchore username for api calls     | harborscanneruser |
-| ANCHORE_PASSWORD | Credential for the anchore user    | foobar |
-| ANCHORE_CLIENT_TIMEOUT_SECONDS | Timeout value for all API calls to Anchore | 10 |
-| ANCHORE_FILTER_VENDOR_IGNORED | Boolean to ignore all vulnerabilities explicitly ignored by distros/vendors (e.g. Debian CVEs marked No-DSA). If unset default = false and all are returned | true
-
+| Environment Variable | Description | Default Value |
+|----------|-------------|---------------|
+| SCANNER_ADAPTER_LISTEN_ADDR | The address for the adapter to listen on for HTTP traffice | ":8080" |
+| SCANNER_ADAPTER_LOG_LEVEL | Log verbosity | "info" |
+| SCANNER_ADAPTER_LOG_FORMAT | Format of the log, either text or json | "text" |
+| SCANNER_ADAPTER_APIKEY | Secret that must be presented by client (harbor) to authenticate calls to the adapter itself | null |
+| SCANNER_ADAPTER_FULL_VULN_DESCRIPTIONS | Add full vulnerability descriptions, but will make scans slower | true |
+| SCANNER_ADAPTER_TLS_KEY_FILE | Path to the private key for the API to listen with HTTPS | null |
+| SCANNER_ADAPTER_TLS_CERT_FILE | Path to the public cert file for the API to listen with HTTPS | null |
+| SCANNER_ADAPTER_FILTER_VENDOR_IGNORED | If set, any vulnerabilities marked as ignored or will-not-fix by vendor (e.g. Debian's No-DSA flag will not be returned in the scan result. This can help reduce noise in scans if you accept the distro vendor's fix assessment. | False |
+| SCANNER_ADAPTER_REGISTRY_VALIDATE_CREDS | If set, the adapter will ask Anchore to validate the credentials passed to it by Harbor for the image fetch. If false, then the validation is skipped and credentials are used without being checked first. | True |
+| SCANNER_ADAPTER_REGISTRY_TLS_VERIFY | If set to False, the adapter will set a flag in Anchore to ensure Anchore skips validation of the TLS certificate when it contacts Harbor to pull the image. This is primarily for use when your Harbor install uses self-signed certificates | True |
+| SCANNER_ADAPTER_DESCRIPTION_CACHE_ENABLED | Boolean to enable a vulnerability cache to improve performance of the scan by caching vulnerability descriptions | True |
+| SCANNER_ADAPTER_DESCRIPTION_CACHE_COUNT | Number of cache entries to keep in memory in the adapter. This is the number of description strings to cache | 10000 | 
+| SCANNER_ADAPTER_DESCRIPTION_CACHE_TTL | The timeout value for entries in the description cache. Descriptions can be updated, so larger values give better performance but may have stale descriptions. | 86400 (24 hours) |
+| SCANNER_ADAPTER_REPORT_CACHE_ENABLED | Boolean to enable caching of the raw vulnerability reports from Anchore within the Adapter. This reduces the call volume to Anchore for different report types requested by Harbor or scans that are close-together and result in the same report from Anchore between Anchore's vuln db updates | True |
+| SCANNER_ADAPTER_REPORT_CACHE_COUNT |  The number of raw Anchore image vulnerability reports to cache in memory to avoid repeated calls to Anchore for the same result. | 100 |
+| SCANNER_ADAPTER_REPORT_CACHE_TTL | The ttl, in seconds, for raw Anchore vulnerability reports in the adapter, which are re-used for the Harbor format and raw format responses. A good value here is at least 10 seconds. | 180 |
+| SCANNER_ADAPTER_DB_UPDATE_CACHE_ENABLED | Boolean to enable caching of the Anchore vulnerability db updated timestamp to reduce call volume between the adapter and Anchore. Harbor tends to check the update timestamp often so this reduces calls to Anchore. | True |
+| SCANNER_ADAPTER_DB_UPDATE_CACHE_TTL | The number of seconds to keep the last db update timestamp before checking the Anchore service again. The service check to Anchore is a bit resource intensive so this value helps reduce load on Anchore from the Adapter | 60 | 
+| ANCHORE_ENDPOINT | The url to reach the Anchore API (e.g https://anchore.mydomain.com) | null |
+| ANCHORE_USERNAME | The username the Adapter will use to authenticate API calls against Anchore itself. This must be a username within Anchore, not a Harbor user. | null | 
+| ANCHORE_PASSWORD | The password the Adapter will use to authenticate API calls against Anchore itself. This is not a Harbor credential. | null |
+| ANCHORE_CLIENT_TIMEOUT_SECONDS | Timeout (in seconds) for API calls to Anchore from the Adapter | 60 |
+| ANCHORE_AUTHFILE_PATH | A path to a json file with any of the properties "username", "password", "endpoint", "timeoutseconds", and "tlsverify" to enable passing Anchore credentials to the Adapter without environment variables (e.g. for secrets in k8s mounted as a file) | null |
+  
 
 ### Configuration file format
 
-The configuration file must be json formatted.
+The configuration file must be json formatted and may contain all or some of the below fields. The config file is loaded first, and any values also present in the environment will override the file values.
 
 ```
 {
   "username": "harbor",
   "password": "harboruserpass123",
+  "endpoint": "http://somehost",
+  "timeoutseconds": 60,
+  "tlsverify": false
 } 
 ```
 
