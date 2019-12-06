@@ -176,7 +176,7 @@ func (s *HarborScannerAdapter) Scan(req harbor.ScanRequest) (harbor.ScanResponse
 		return harbor.ScanResponse{}, err
 	}
 
-	if req.Registry.Authorization != "" {
+	if !s.Configuration.UseAnchoreConfiguredCreds && req.Registry.Authorization != "" {
 		username, password, err2 := GetUsernamePassword(req.Registry.Authorization)
 		if err2 != nil {
 			return harbor.ScanResponse{}, err2
@@ -187,7 +187,14 @@ func (s *HarborScannerAdapter) Scan(req harbor.ScanRequest) (harbor.ScanResponse
 		if err != nil {
 			return harbor.ScanResponse{}, err
 		}
+	} else {
+		if s.Configuration.UseAnchoreConfiguredCreds {
+			log.Info("Skipping adding Harbor authz token to Anchore due to adapter configuration")
+		} else {
+			log.Info("Skipping adding Harbor authz token to Anchore due to no token provided in request")
+		}
 	}
+
 	// Convert and submit the scan request
 	anchoreScanRequest, err := ScanToAnchoreRequest(req)
 	if err != nil {

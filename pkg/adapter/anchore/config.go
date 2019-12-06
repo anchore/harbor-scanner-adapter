@@ -26,6 +26,7 @@ type AdapterConfig struct {
 	RegistryValidateCreds         bool                // Validate registry credentials when adding them to Anchore via the Anchore API
 	AnchoreClientConfig           client.ClientConfig //Credentials and client configuration
 	CacheConfig                   CacheConfiguration
+	UseAnchoreConfiguredCreds     bool // If true, the adapter will ignore the dynamic credentials that are provided by harbor for each scan and will instead expect that the admin has configured Anchore with credentials out-of-band. Default is False.
 }
 
 const (
@@ -64,6 +65,8 @@ const (
 	DbUpdateCacheTtl                  = "SCANNER_ADAPTER_DB_UPDATE_CACHE_TTL"
 	DefaultDbUpdateCacheEnabled       = true
 	DefaultDbUpdateCacheTTL           = 60
+	UseAnchoreConfigCredsEnvVarName   = "SCANNER_ADAPTER_IGNORE_HARBOR_CREDS"
+	UseAnchoreConfigCredsDefault      = false
 )
 
 // Initialized to defaults
@@ -285,6 +288,8 @@ func GetConfig() (AdapterConfig, error) {
 			return cfg, err
 		}
 	}
+
+	cfg.UseAnchoreConfiguredCreds, err = GetEnvBoolean(UseAnchoreConfigCredsEnvVarName, UseAnchoreConfigCredsDefault)
 
 	return cfg, nil
 }
