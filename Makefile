@@ -1,4 +1,4 @@
-COMMIT = $(shell git rev-parse HEAD)
+COMMIT ?= $(shell git rev-parse HEAD)
 BINARY := anchore-adapter
 IMAGE_TAG ?= dev
 REPOSITORY ?= anchore/harbor-scanner-adapter

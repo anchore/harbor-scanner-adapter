@@ -1,9 +1,9 @@
-ARG COMMIT
-
 FROM alpine:3.10
 
+ARG COMMIT
+
 LABEL "maintainer"="dev@anchore.com"
-LABEL "commit"=$COMMIT
+LABEL "commit"=${COMMIT}
 LABEL "source"="https://github.com/anchore/harbor-scanner-adapter"
 
 RUN apk update && apk add --no-cache curl bash ca-certificates && update-ca-certificates
