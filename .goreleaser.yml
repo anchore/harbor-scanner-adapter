@@ -27,6 +27,7 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+      - '^chore:'
 dockers:
   - image_templates:
       - "{{.Env.REPOSITORY}}:{{ .Version }}"
