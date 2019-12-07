@@ -12,4 +12,4 @@ export ANCHORE_FILTER_VENDOR_IGNORED=false
 export SCANNER_ADAPTER_FULL_VULN_DESCRIPTIONS=true
 #export SCANNER_ADAPTER_APIKEY="abc123"
 
-./bin/anchore-adapter
+./anchore-adapter
