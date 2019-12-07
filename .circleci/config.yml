@@ -20,8 +20,7 @@ jobs:
       - image: circleci/golang:1
     steps:
       - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
+      - setup_remote_docker
       - run:
           name: Build container
           command: make container
