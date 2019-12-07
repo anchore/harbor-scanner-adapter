@@ -1,4 +1,5 @@
 COMMIT ?= $(shell git rev-parse HEAD)
+SOURCES := $(shell find . -name '*.go')
 BINARY := anchore-adapter
 IMAGE_TAG ?= dev
 REPOSITORY ?= anchore/harbor-scanner-adapter
@@ -6,7 +7,7 @@ IMAGE ?= $(REPOSITORY):$(IMAGE_TAG)
 
 build: $(BINARY)
 
-$(BINARY):
+$(BINARY): $(SOURCES)
 	GOOS=linux GO111MODULE=on CGO_ENABLED=0 go build -o $(BINARY) cmd/anchore-adapter/main.go
 
 .PHONY: container
