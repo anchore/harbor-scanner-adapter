@@ -12,7 +12,7 @@ const (
 	HarborMetadataVulnDbUpdateKey = "harbor.scanner-adapter/vulnerability-database-updated-at"
 	HarborMetadataScannerTypeKey  = "harbor.scanner-adapter/scanner-type"
 	AdapterType                   = "os-package-vulnerability"
-	AdapterVersion                = "1.0.0-alpha"
+	AdapterVersion                = "1.0.0"
 	AdapterVendor                 = "Anchore Inc."
 	AdapterName                   = "Anchore"
 )
