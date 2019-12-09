@@ -51,11 +51,13 @@ func getNewRequest(clientConfiguration *ClientConfig) *gorequest.SuperAgent {
 // Reload the anchore user name and password if AWS Secret Manager is used
 func reloadCredential(clientConfiguration *ClientConfig) {
 	if strings.HasPrefix(clientConfiguration.Username, "aws:secretmanager") {
+		log.Debug("Start to load user name from AWS Secret Manager")
 		if getAWSSecret(clientConfiguration.Username) != "" {
 			clientConfiguration.Username = getAWSSecret(clientConfiguration.Username)
 		}
 	}
 	if strings.HasPrefix(clientConfiguration.Password, "aws:secretmanager") {
+		log.Debug("Start to load password from AWS Secret Manager")
 		if getAWSSecret(clientConfiguration.Password) != "" {
 			clientConfiguration.Password = getAWSSecret(clientConfiguration.Password)
 		}
@@ -66,6 +68,8 @@ func getAWSSecret(configValue string) string {
 	// The expected format is aws:secretmanager:<region>:<secret name><secret key>
 	fileds := strings.Split(configValue, ":")
 	region, name, key := fileds[2], fileds[3], fileds[4]
+
+	log.WithFields(log.Fields{"region": region, "name": name, "key": key}).Debug("pass in secret manager parameters")
 
 	//Create a Secrets Manager client
 	svc := secretsmanager.New(session.New(), &aws.Config{Region: aws.String(region)})
