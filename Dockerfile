@@ -4,7 +4,7 @@ FROM alpine:3.10
 
 LABEL "maintainer"="dev@anchore.com"
 LABEL "commit"=$COMMIT
-LABEL "source"="https://github.com/anchore/harbor-scanner-adapter"
+LABEL "source"="https://github.com/cafeliker/harbor-scanner-adapter-anchore"
 
 RUN apk update && apk add --no-cache curl bash ca-certificates && update-ca-certificates
 
