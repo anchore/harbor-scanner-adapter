@@ -36,7 +36,7 @@ spec:
                   key: password
             - name: ANCHORE_CLIENT_TIMEOUT_SECONDS
               value: "60"
-            - name: ANCHORE_FILTER_VENDOR_IGNORED
+            - name: SCANNER_ADAPTER_FILTER_VENDOR_IGNORED
               value: "true"
             - name: SCANNER_ADAPTER_LOG_LEVEL
               value: "debug"
