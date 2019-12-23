@@ -5,11 +5,11 @@ import (
 )
 
 type CredentialLoader interface {
-	load(string) string
+	LoadFromCredentialStore(passwordConfig string) string
 }
 
-func CreateCredentialLoader(key string) CredentialLoader {
-	if strings.HasPrefix(key, "aws:secretmanager") {
+func CreateCredentialLoader(passwordConfig string) CredentialLoader {
+	if strings.HasPrefix(passwordConfig, "aws:secretmanager") {
 		return &AWSCredenitalLoader{}
 	}
 	return &DefaultCredenitalLoader{}

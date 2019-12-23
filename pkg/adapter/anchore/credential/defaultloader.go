@@ -2,6 +2,6 @@ package credential
 
 type DefaultCredenitalLoader struct{}
 
-func (c *DefaultCredenitalLoader) load(key string) string {
-	return key
+func (c *DefaultCredenitalLoader) LoadFromCredentialStore(passwordConfig string) string {
+	return passwordConfig
 }

@@ -14,14 +14,15 @@ import (
 
 type AWSCredenitalLoader struct{}
 
-func (c *AWSCredenitalLoader) load(key string) string {
-	if strings.HasPrefix(key, "aws:secretmanager") {
+func (c *AWSCredenitalLoader) LoadFromCredentialStore(passwordConfig string) string {
+	if strings.HasPrefix(passwordConfig, "aws:secretmanager") {
 		log.Debug("Start to load password from AWS Secret Manager")
-		if getAWSSecret(key) != "" {
-			return getAWSSecret(key)
+		value := getAWSSecret(passwordConfig)
+		if value != "" {
+			return value
 		}
 	}
-	return key
+	return passwordConfig
 }
 
 func getAWSSecret(configValue string) string {
