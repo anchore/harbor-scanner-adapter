@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/client"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -15,19 +14,14 @@ import (
 
 type AWSCredenitalLoader struct{}
 
-func (c *AWSCredenitalLoader) load(clientConfiguration client.ClientConfig) {
-	if strings.HasPrefix(clientConfiguration.Username, "aws:secretmanager") {
-		log.Debug("Start to load user name from AWS Secret Manager")
-		if getAWSSecret(clientConfiguration.Username) != "" {
-			clientConfiguration.Username = getAWSSecret(clientConfiguration.Username)
-		}
-	}
-	if strings.HasPrefix(clientConfiguration.Password, "aws:secretmanager") {
+func (c *AWSCredenitalLoader) load(key string) string {
+	if strings.HasPrefix(key, "aws:secretmanager") {
 		log.Debug("Start to load password from AWS Secret Manager")
-		if getAWSSecret(clientConfiguration.Password) != "" {
-			clientConfiguration.Password = getAWSSecret(clientConfiguration.Password)
+		if getAWSSecret(key) != "" {
+			return getAWSSecret(key)
 		}
 	}
+	return key
 }
 
 func getAWSSecret(configValue string) string {

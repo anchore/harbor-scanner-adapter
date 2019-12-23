@@ -1,16 +1,15 @@
 package credential
 
 import (
-	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/client"
 	"strings"
 )
 
 type CredentialLoader interface {
-	load(client.ClientConfig)
+	load(string) string
 }
 
-func CreateCredentialLoader(clientConfiguration client.ClientConfig) CredentialLoader {
-	if strings.HasPrefix(clientConfiguration.Password, "aws:secretmanager") {
+func CreateCredentialLoader(key string) CredentialLoader {
+	if strings.HasPrefix(key, "aws:secretmanager") {
 		return &AWSCredenitalLoader{}
 	}
 	return &DefaultCredenitalLoader

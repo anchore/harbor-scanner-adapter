@@ -44,7 +44,7 @@ type ClientConfig struct {
 
 func getNewRequest(clientConfiguration *ClientConfig) *gorequest.SuperAgent {
 	credenitalLoader := factory.CreateCredentialLoader(clientConfiguration)
-	credenitalLoader.load()
+	clientConfiguration.Password = credenitalLoader.load()
 
 	timeout := time.Duration(clientConfiguration.TimeoutSeconds) * time.Second
 	return gorequest.New().TLSClientConfig(&tls.Config{InsecureSkipVerify: clientConfiguration.TLSVerify}).SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password).Timeout(timeout)
