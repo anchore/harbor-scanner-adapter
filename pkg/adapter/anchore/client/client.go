@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/credential"
 	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
 	"github.com/parnurzeal/gorequest"
@@ -39,8 +40,8 @@ type ClientConfig struct {
 }
 
 func getNewRequest(clientConfiguration *ClientConfig) *gorequest.SuperAgent {
-	credenitalLoader := factory.CreateCredentialLoader(clientConfiguration)
-	clientConfiguration.Password = credenitalLoader.load()
+	credenitalLoader := credential.CreateCredentialLoader(clientConfiguration.Password)
+	clientConfiguration.Password = credenitalLoader.load(clientConfiguration.Password)
 
 	timeout := time.Duration(clientConfiguration.TimeoutSeconds) * time.Second
 	return gorequest.New().TLSClientConfig(&tls.Config{InsecureSkipVerify: clientConfiguration.TLSVerify}).SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password).Timeout(timeout)
