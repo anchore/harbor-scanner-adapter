@@ -13,10 +13,6 @@ import (
 	"time"
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/credential"
 	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/parnurzeal/gorequest"
 	log "github.com/sirupsen/logrus"
 )
