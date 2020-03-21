@@ -3,6 +3,7 @@ module github.com/anchore/harbor-scanner-adapter
 go 1.12
 
 require (
+	github.com/aws/aws-sdk-go v1.25.48
 	github.com/elazarl/goproxy v0.0.0-20190711103511-473e67f1d7d2 // indirect
 	github.com/elazarl/goproxy/ext v0.0.0-20191011121108-aa519ddbe484 // indirect
 	github.com/golang/groupcache v0.0.0-20191002201903-404acd9df4cc
