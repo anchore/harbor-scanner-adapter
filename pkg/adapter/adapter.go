@@ -7,7 +7,7 @@ import (
 const (
 	HarborVulnReportv1MimeType    = "application/vnd.scanner.adapter.vuln.report.harbor+json; version=1.0"
 	RawVulnReportMimeType         = "application/vnd.scanner.adapter.vuln.report.raw+json"
-	DockerImageMimeType           = "application/vnd.oci.image.manifest.v1+json"
+	DockerImageMimeType           = "application/vnd.oci.image.manifest.v2+json"
 	OciImageMimeType              = "application/vnd.docker.distribution.manifest.v2+json"
 	HarborMetadataVulnDbUpdateKey = "harbor.scanner-adapter/vulnerability-database-updated-at"
 	HarborMetadataScannerTypeKey  = "harbor.scanner-adapter/scanner-type"
