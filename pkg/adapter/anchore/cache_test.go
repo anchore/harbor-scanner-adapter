@@ -2,10 +2,12 @@ package anchore
 
 import (
 	"encoding/base64"
-	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
+	"fmt"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
 )
 
 // Db update cache tests
@@ -175,8 +177,8 @@ func TestVulnDescriptionCacheSize(t *testing.T) {
 
 		desc := base64.StdEncoding.EncodeToString(tmp)
 
-		DescriptionCache.Add("id"+string(i), anchore.NamespacedVulnerability{
-			ID:          "cve-" + string(i),
+		DescriptionCache.Add(fmt.Sprintf("id%d", i), anchore.NamespacedVulnerability{
+			ID:          fmt.Sprintf("cve-%d", i),
 			Namespace:   "debian:9",
 			Description: desc,
 		})

@@ -6,7 +6,7 @@ jobs:
   unit_test:
     description: Run tests for formatting
     docker:
-      - image: circleci/golang:1
+      - image: cimg/go:1.19
     steps:
       - checkout
       - run:
@@ -17,7 +17,7 @@ jobs:
           command: make test
   build_image:
     docker:
-      - image: circleci/golang:1
+      - image: cimg/go:1.19
     steps:
       - checkout
       - setup_remote_docker
@@ -26,7 +26,7 @@ jobs:
           command: make container
   push_dev_image:
     docker:
-      - image: circleci/golang:1
+      - image: cimg/go:1.19
     steps:
       - checkout
       - setup_remote_docker:
@@ -42,7 +42,7 @@ jobs:
           command: make push
   release:
     docker:
-      - image: circleci/golang:1.13
+      - image: cimg/go:1.19
     steps:
       - checkout
       - setup_remote_docker:

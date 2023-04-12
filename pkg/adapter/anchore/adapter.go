@@ -347,7 +347,7 @@ func (s *HarborScannerAdapter) GetRawVulnerabilityReport(scanId string) (harbor.
 	return s.GetAnchoreVulnReport(digest)
 }
 
-//Convert the Anchore vuln to a harbor description
+// Convert the Anchore vuln to a harbor description
 func ToHarborDescription(anchoreVuln *anchore.Vulnerability) (string, error) {
 	var CVSSv3 float64
 	var CVSSv2 float64

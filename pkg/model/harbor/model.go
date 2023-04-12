@@ -61,7 +61,7 @@ func ToHarborSeverity(severity string) Severity {
 	}
 }
 
-//Marshalling for JSON stuff
+// Marshalling for JSON stuff
 func (sev Severity) MarshalJSON() ([]byte, error) {
 	buffer := bytes.NewBufferString(fmt.Sprintf(`"%v"`, sev.String()))
 	return buffer.Bytes(), nil
