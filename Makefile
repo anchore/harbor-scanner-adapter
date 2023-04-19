@@ -2,8 +2,8 @@ COMMIT ?= $(shell git rev-parse HEAD)
 SOURCES := $(shell find . -name '*.go')
 BINARY := anchore-adapter
 IMAGE_TAG ?= dev
-REPOSITORY ?= anchore/harbor-scanner-adapter
-IMAGE ?= $(REPOSITORY):$(IMAGE_TAG)
+IMAGE_REPOSITORY ?= anchore/harbor-scanner-adapter
+IMAGE ?= $(IMAGE_REPOSITORY):$(IMAGE_TAG)
 
 build: $(BINARY)
 
