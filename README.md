@@ -6,7 +6,7 @@
 ## Overview
 
 The Harbor Scanner Adapter for Anchore is a service that translates the Harbor scanning API into the Anchore API
-and allows Harbor to utilize Anchore Engine (or Enterprise) for providing vulnerability reports on images stored in Harbor as
+and allows Harbor to utilize Anchore Enterprise for providing vulnerability reports on images stored in Harbor as
 part of its vulnerability scan feature.
 
 This Adapter is only required if you want Harbor to use Anchore for its 'Scan' feature. If your objective is to use Anchore in a CI/CD
@@ -119,19 +119,17 @@ Install Harbor:
 helm install --name harbor harbor/harbor
 ```
 
-Install Anchore Engine or Enterprise (Engine as example):
-
-**NOTE: this adapter requires Anchore Engine v0.5.1 or newer**
+Install Anchore Enterprise:
 
 ```
-helm install --name anchore stable/anchore-engine
+helm install --name anchore stable/anchore-engine -f enterprise_values.yaml
 ```
 
 Create a harbor account and user in Anchore for the adapter to use for authenticating calls to Anchore. 
 
 _This is not required, but recommended as it will limit the scope of the adapter's credentials within Anchore to a 
 non-admin account and keep all Harbor image data in one account for easy management. This step can be skipped for demo environments where the Anchore Engine deployment is not shared, but is strongly encouraged for all production use and all cases where
-Harbor will be integrated with an existing Anchore Engine/Enterprise deployment._
+Harbor will be integrated with an existing Anchore deployment._
 
 ```
 ANCHORE_CLI_USER=admin
