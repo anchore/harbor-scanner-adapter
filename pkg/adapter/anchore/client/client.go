@@ -67,7 +67,7 @@ func unmarshalError(body []byte, response gorequest.Response) (anchore.Error, er
 		result.Detail["instance"] = jsonError.Instance
 		result.Detail["status"] = jsonError.Status
 		return result, nil
-	} else if body != nil && len(body) > 0 {
+	} else if len(body) > 0 {
 		// Try to unmarshal an anchore error
 		err := json.Unmarshal(body, &result)
 		if err != nil {

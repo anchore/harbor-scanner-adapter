@@ -3,13 +3,13 @@ package anchore
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/client"
-	log "github.com/sirupsen/logrus"
-	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/client"
+	log "github.com/sirupsen/logrus"
 )
 
 type AdapterConfig struct {
@@ -173,7 +173,7 @@ func GetConfig() (AdapterConfig, error) {
 
 	if path, ok := os.LookupEnv(AuthConfigFile); ok {
 		log.Printf("Using config file at %v", path)
-		content, err := ioutil.ReadFile(path)
+		content, err := os.ReadFile(path)
 		if err != nil {
 			log.Error("error reading config file")
 			return cfg, err
