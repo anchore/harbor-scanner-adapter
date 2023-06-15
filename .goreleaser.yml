@@ -33,8 +33,6 @@ dockers:
       - "{{.Env.REPOSITORY}}:{{ .Version }}"
     goos: linux
     goarch: amd64
-    binaries:
-      - anchore-adapter
     build_flag_templates:
       - "--label=org.label-schema.schema-version=1.0"
       - "--label=org.label-schema.name={{ .ProjectName }}"
