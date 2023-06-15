@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: adapter
-          image: anchore/harbor-scanner-adapter:1.0.1
+          image: anchore/harbor-scanner-adapter:1.0.2
           imagePullPolicy: IfNotPresent
           env:
             - name: SCANNER_ADAPTER_LISTEN_ADDR
