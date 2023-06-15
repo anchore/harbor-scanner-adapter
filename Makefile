@@ -34,3 +34,7 @@ clean-container:
 .PHONY: push
 push: container
 	docker push $(IMAGE)
+
+.PHONY: release
+release: 
+	IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) goreleaser release --clean

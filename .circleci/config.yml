@@ -80,7 +80,8 @@ jobs:
 
             download
             tar -xf "$TAR_FILE" -C "$TMPDIR"
-            "${TMPDIR}/goreleaser" "$@"
+            export PATH=$PATH:${TMPDIR}/
+            make release
 
 workflows:
   default:
@@ -102,7 +103,7 @@ workflows:
           filters:
             branches:
               only:
-                - master
+                - main
       - release:
           context: dockerhub
           requires:

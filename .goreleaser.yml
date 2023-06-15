@@ -30,7 +30,7 @@ changelog:
       - '^chore:'
 dockers:
   - image_templates:
-      - "{{.Env.REPOSITORY}}:{{ .Version }}"
+      - "{{.Env.IMAGE_REPOSITORY}}:{{ .Version }}"
     goos: linux
     goarch: amd64
     build_flag_templates:
