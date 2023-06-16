@@ -75,5 +75,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-${{ env.GO_VERSION }}-
 
+      - name: Install tools
+        run: make bootstrap-tools
+
       - name: Run container build
         run: make snapshot

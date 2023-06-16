@@ -4,12 +4,36 @@ BINARY := anchore-adapter
 IMAGE_TAG ?= dev
 IMAGE_REPOSITORY ?= anchore/harbor-scanner-adapter
 IMAGE ?= $(IMAGE_REPOSITORY):$(IMAGE_TAG)
+TEMPDIR = ./.tmp
+GORELEASER_VERSION = v1.16.1
+DISTDIR = ./dist
+SNAPSHOTDIR = ./snapshot
+
+ifndef TEMPDIR
+        $(error TEMPDIR is not set)
+endif
+
+ifndef SNAPSHOTDIR
+        $(error SNAPSHOTDIR is not set)
+endif
+
+ifndef DISTDIR
+        $(error DISTDIR is not set)
+endif
 
 all: test build
 
+$(TEMPDIR):
+	mkdir -p $(TEMPDIR)
+
+.PHONY: bootstrap-tools
+bootstrap-tools: $(TEMPDIR) $(RESULTSDIR)
+	$(call title,Boostrapping tools)
+	GOBIN="$(realpath $(TEMPDIR))" go install github.com/goreleaser/goreleaser@$(GORELEASER_VERSION)
+
 .PHONY: build
 build:
-	goreleaser build --clean --snapshot
+	$(TEMPDIR)/goreleaser build --clean --snapshot
 
 .PHONY: test
 test:
@@ -29,8 +53,8 @@ clean-image:
 
 .PHONY: release
 release: 
-	IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) goreleaser release --clean --skip-publish --skip-validate
+	IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) $(TEMPDIR)/goreleaser release --clean --skip-publish --skip-validate
 
 .PHONY: snapshot
 snapshot:
-	IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) goreleaser release --clean --snapshot
+	IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) $(TEMPDIR)/goreleaser release --clean --snapshot
