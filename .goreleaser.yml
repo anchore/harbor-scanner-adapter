@@ -11,12 +11,6 @@ builds:
       - CGO_ENABLED=0
     goarch: 
       - amd64
-archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
-      386: i386
-      amd64: x86_64
 checksum:
   name_template: 'checksums.txt'
 snapshot:
@@ -29,7 +23,8 @@ changelog:
       - '^test:'
       - '^chore:'
 dockers:
-  - image_templates:
+  - id: image
+    image_templates:
       - "{{.Env.IMAGE_REPOSITORY}}:{{ .Version }}"
     goos: linux
     goarch: amd64
