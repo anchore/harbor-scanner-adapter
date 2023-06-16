@@ -40,14 +40,14 @@ The adapter never makes requests to Harbor and never reads any image content, on
 
 ## Building the Adapter service
 
-Run `make` to get the binary in bin/scanner-anchore
+Run `make` to run test and get the binary in dist/<platform>/anchore-adapter
 ```
 make
 ```
 
 To build into a container: 
 ```
-make container
+make snapshot
 ```
 
 

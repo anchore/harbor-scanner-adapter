@@ -5,36 +5,32 @@ IMAGE_TAG ?= dev
 IMAGE_REPOSITORY ?= anchore/harbor-scanner-adapter
 IMAGE ?= $(IMAGE_REPOSITORY):$(IMAGE_TAG)
 
-build: $(BINARY)
+all: test build
 
-$(BINARY): $(SOURCES)
-	GOOS=linux GO111MODULE=on CGO_ENABLED=0 go build -o $(BINARY) cmd/anchore-adapter/main.go
-
-.PHONY: container
-container: build
-	docker build --build-arg COMMIT=$(COMMIT) -t $(IMAGE) .
+.PHONY: build
+build:
+	goreleaser build --clean --snapshot
 
 .PHONY: test
 test:
-	GOOS=linux GO111MODULE=on CGO_ENABLED=0 go test ./...
+	CGO_ENABLED=0 go test ./...
 
-clean: clean-binary
-
-.PHONY: clean-all
-clean-all: clean-container clean-binary
+.PHONY: clean
+clean: clean-binary clean-image
 
 .PHONY: clean-binary
 clean-binary:
-	rm $(BINARY)
+	rm -f $(BINARY)
+	rm -rf dist/
 
-.PHONY: clean-container
-clean-container:
-	docker rmi $(IMAGE)
-
-.PHONY: push
-push: container
-	docker push $(IMAGE)
+.PHONY: clean-image
+clean-image:
+	docker rmi -f $(IMAGE)
 
 .PHONY: release
 release: 
-	IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) goreleaser release --clean
+	IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) goreleaser release --clean --skip-publish --skip-validate
+
+.PHONY: snapshot
+snapshot:
+	IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) goreleaser release --clean --snapshot
