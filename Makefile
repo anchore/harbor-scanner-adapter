@@ -53,7 +53,7 @@ clean-image:
 
 .PHONY: release
 release: 
-	IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) $(TEMPDIR)/goreleaser release --clean --skip-publish --skip-validate
+	IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) $(TEMPDIR)/goreleaser release --clean
 
 .PHONY: snapshot
 snapshot:
