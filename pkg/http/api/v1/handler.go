@@ -167,7 +167,7 @@ func (h *APIHandler) CreateScan(res http.ResponseWriter, req *http.Request) {
 
 func (h *APIHandler) GetScanReport(res http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-	scanId, _ := vars["scanId"]
+	scanId := vars["scanId"]
 
 	requestedTypes := req.Header[AcceptHeader]
 	numTypes := len(requestedTypes)

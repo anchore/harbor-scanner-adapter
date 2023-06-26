@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter"
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/client"
@@ -282,7 +283,7 @@ func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(scanId string, inclu
 			DescriptionCache.Add(cacheKeyForVuln(&desc), desc.Description)
 		}
 
-		descriptionTime := time.Now().Sub(start)
+		descriptionTime := time.Since(start)
 		log.WithFields(log.Fields{"duration": descriptionTime}).Debug("time to get descriptions")
 	} else {
 		log.Debug("Skipping vuln description merge, as dictated by configuration")

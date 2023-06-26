@@ -23,7 +23,7 @@ func TestMarshalJSON(t *testing.T) {
 		t.Fail()
 	}
 
-	if strings.Index(string(s), "High") == -1 {
+	if !strings.Contains(string(s), "High") {
 		log.Printf("Incorrect marshalling: %v", string(s))
 		t.Fail()
 	}
