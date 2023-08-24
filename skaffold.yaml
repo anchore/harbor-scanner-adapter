@@ -1,0 +1,13 @@
+apiVersion: skaffold/v4beta6
+kind: Config
+metadata:
+  name: harbor-scanner-adapter
+build:
+  artifacts:
+    - image: anchore/harbor-scanner-adapter
+      ko:
+        fromImage: alpine:3.17
+        main: ./cmd/anchore-adapter
+manifests:
+  rawYaml:
+    - k8s/harbor-adapter-anchore-skaffold.yaml

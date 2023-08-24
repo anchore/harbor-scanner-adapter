@@ -176,6 +176,14 @@ Leave authorization empty since in this example we did not set an API key in the
 Click "Test Connection" and should work. 
 You can now click "Add" to complete the setup.
 
+## Development
+
+If you have skaffold installed it can be used against a local k8s install for
+dev. Running `skaffold dev` will build the adapter with ko and deploy using the
+manifest file at k8s/harbor-adapter-anchore-skaffold.yaml. Any changes will
+then be live deployed to local k8s for testing.
+
+
 ## Special Thanks
 
 Special thanks to the following for their help with the prototype adapter implementation that inspired this work:
