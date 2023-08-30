@@ -1,10 +1,11 @@
 package anchore
 
 import (
-	"github.com/golang/groupcache/lru"
-	log "github.com/sirupsen/logrus"
 	"sync"
 	"time"
+
+	"github.com/golang/groupcache/lru"
+	log "github.com/sirupsen/logrus"
 )
 
 // A simple struct to track the cache time for the entry as well as the value itself
@@ -33,12 +34,19 @@ type ConcurrentCache interface {
 type LockingTTLCache struct {
 	Cache   *lru.Cache    // The data store, stores TimestampedEntry values
 	Lock    sync.Mutex    // Lock for concurrency
-	TTL     time.Duration //TTL for values
-	Enabled bool          //If true, use the cache, else always bypass
+	TTL     time.Duration // TTL for values
+	Enabled bool          // If true, use the cache, else always bypass
 }
 
+// Cache for vulnerability description text since those must be retrieved from the Anchore APIs separately
+// This can be removed if/when the Anchore API vulnerability response includes descriptions directly
 var DescriptionCache *LockingTTLCache
+
+// Cache for the vulnerability response from the Anchore API
 var ReportCache *LockingTTLCache
+
+// Cache for storing vuln db update timestamps to minimize the calls to get the db timestamp since it isn't part of
+// the vulnerability response
 var UpdateTimestampCache *LockingTTLCache
 
 func NewCache(enabled bool, size int, ttl int) *LockingTTLCache {
@@ -95,8 +103,16 @@ func (c *LockingTTLCache) Flush() {
 
 func InitCaches(configuration CacheConfiguration) error {
 	log.WithField("config", configuration).Info("initializing caches")
-	DescriptionCache = NewCache(configuration.VulnDescriptionCacheEnabled, configuration.VulnDescriptionCacheMaxCount, configuration.VulnDescriptionCacheTTL)
-	ReportCache = NewCache(configuration.VulnReportCacheEnabled, configuration.VulnReportCacheMaxCount, configuration.VulnReportCacheTTL)
+	DescriptionCache = NewCache(
+		configuration.VulnDescriptionCacheEnabled,
+		configuration.VulnDescriptionCacheMaxCount,
+		configuration.VulnDescriptionCacheTTL,
+	)
+	ReportCache = NewCache(
+		configuration.VulnReportCacheEnabled,
+		configuration.VulnReportCacheMaxCount,
+		configuration.VulnReportCacheTTL,
+	)
 	UpdateTimestampCache = NewCache(configuration.DbUpdateCacheEnabled, 1, configuration.DbUpdatedCacheTTL)
 	return nil
 }

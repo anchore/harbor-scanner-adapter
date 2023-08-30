@@ -2,14 +2,15 @@ package v1
 
 import (
 	"fmt"
-	"github.com/anchore/harbor-scanner-adapter/pkg/adapter"
-	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore"
-	"github.com/anchore/harbor-scanner-adapter/pkg/model/harbor"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/anchore/harbor-scanner-adapter/pkg/adapter"
+	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore"
+	"github.com/anchore/harbor-scanner-adapter/pkg/model/harbor"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -33,7 +34,7 @@ func (m *MockAdapter) GetMetadata() (harbor.ScannerAdapterMetadata, error) {
 	return harbor.ScannerAdapterMetadata{
 		Scanner: harbor.Scanner{},
 		Capabilities: []harbor.Capability{
-			harbor.Capability{
+			{
 				ConsumesMIMETypes: nil,
 				ProducesMIMETypes: nil,
 			},
@@ -50,9 +51,13 @@ func (m *MockAdapter) Scan(req harbor.ScanRequest) (harbor.ScanResponse, error) 
 	return harbor.ScanResponse{id}, nil
 }
 
-func (m *MockAdapter) GetHarborVulnerabilityReport(scanId string, includeDescriptions bool) (harbor.VulnerabilityReport, error) {
-	return harbor.VulnerabilityReport{}, nil
+func (m *MockAdapter) GetHarborVulnerabilityReport(
+	scanId string,
+	includeDescriptions bool,
+) (*harbor.VulnerabilityReport, error) {
+	return &harbor.VulnerabilityReport{}, nil
 }
+
 func (m *MockAdapter) GetRawVulnerabilityReport(scanId string) (harbor.RawReport, error) {
 	return `{"image": "sha256:test123"}`, nil
 }
@@ -72,8 +77,26 @@ func TestCreateScan(t *testing.T) {
 	handler := NewMockHandler()
 
 	okRequests := [][]string{
-		{fmt.Sprintf(`{"registry": {"url": "%v"}, "artifact": {"repository": "%v", "digest": "%v", "tag": "%v"}}`, TestRegistry, TestRepo1, TestDigest1, TestTag1), `{"id":"bGlicmFyeS9pbWFnZTEvaW1hZ2VAc2hhMjU2OjQyMTQ3MDdlYzNlYzE1N2Y5NTY2MjU4NzEwZTI3NDgyNGEwYjZhOGUzNDA1MWJkMDgxZDkxOTI5MDBkMDY2NDc="}`},
-		{fmt.Sprintf(`{"registry": {"url": "%v"}, "artifact": {"repository": "%v", "digest": "%v", "tag": "%v"}}`, TestRegistry, TestRepo1, TestDigest1, ""), `{"id":"bGlicmFyeS9pbWFnZTEvaW1hZ2VAc2hhMjU2OjQyMTQ3MDdlYzNlYzE1N2Y5NTY2MjU4NzEwZTI3NDgyNGEwYjZhOGUzNDA1MWJkMDgxZDkxOTI5MDBkMDY2NDc="}`},
+		{
+			fmt.Sprintf(
+				`{"registry": {"url": "%v"}, "artifact": {"repository": "%v", "digest": "%v", "tag": "%v"}}`,
+				TestRegistry,
+				TestRepo1,
+				TestDigest1,
+				TestTag1,
+			),
+			`{"id":"bGlicmFyeS9pbWFnZTEvaW1hZ2VAc2hhMjU2OjQyMTQ3MDdlYzNlYzE1N2Y5NTY2MjU4NzEwZTI3NDgyNGEwYjZhOGUzNDA1MWJkMDgxZDkxOTI5MDBkMDY2NDc="}`,
+		},
+		{
+			fmt.Sprintf(
+				`{"registry": {"url": "%v"}, "artifact": {"repository": "%v", "digest": "%v", "tag": "%v"}}`,
+				TestRegistry,
+				TestRepo1,
+				TestDigest1,
+				"",
+			),
+			`{"id":"bGlicmFyeS9pbWFnZTEvaW1hZ2VAc2hhMjU2OjQyMTQ3MDdlYzNlYzE1N2Y5NTY2MjU4NzEwZTI3NDgyNGEwYjZhOGUzNDA1MWJkMDgxZDkxOTI5MDBkMDY2NDc="}`,
+		},
 	}
 
 	for _, input := range okRequests {

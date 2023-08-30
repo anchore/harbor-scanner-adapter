@@ -17,14 +17,14 @@ type AdapterConfig struct {
 	ApiKey                        string // Key for auth, used as a Bearer token
 	LogFormat                     string
 	LogLevel                      log.Level
-	FullVulnerabilityDescriptions bool   //If true, the scanner adapter will query anchore to get vuln descriptions, else will use cvss string and defer to the link url
+	FullVulnerabilityDescriptions bool   // If true, the scanner adapter will query anchore to get vuln descriptions, else will use cvss string and defer to the link url
 	TLSKeyFile                    string // Path to key file
 	TLSCertFile                   string // Path to cert file
 	FilterVendorIgnoredVulns      bool
 	TLSVerify                     bool                // Enable TLS verification on api calls to the adapter
 	RegistryTLSVerify             bool                // Enable TLS verification on Anchore's calls to the registry on the data path
 	RegistryValidateCreds         bool                // Validate registry credentials when adding them to Anchore via the Anchore API
-	AnchoreClientConfig           client.ClientConfig //Credentials and client configuration
+	AnchoreClientConfig           client.ClientConfig // Credentials and client configuration
 	CacheConfig                   CacheConfiguration
 	UseAnchoreConfiguredCreds     bool // If true, the adapter will ignore the dynamic credentials that are provided by harbor for each scan and will instead expect that the admin has configured Anchore with credentials out-of-band. Default is False.
 }
@@ -115,7 +115,7 @@ func GetConfig() (AdapterConfig, error) {
 		comps := strings.Split(cfg.ListenAddr, ":")
 		if len(comps) == 2 {
 			if len(comps[0]) == 0 {
-				//Ok, like ":8080"
+				// Ok, like ":8080"
 			} else {
 				if net.ParseIP(comps[0]) == nil {
 					return cfg, fmt.Errorf("invalid IP component of listen address %s", cfg.ListenAddr)
@@ -243,12 +243,16 @@ func GetConfig() (AdapterConfig, error) {
 
 	cfg.CacheConfig = DefaultCacheConfig
 
-	cfg.CacheConfig.VulnDescriptionCacheEnabled, err = GetEnvBoolean(DescriptionCacheEnabledEnvVarName, DefaultDescriptionCacheEnabled)
+	cfg.CacheConfig.VulnDescriptionCacheEnabled, err = GetEnvBoolean(
+		DescriptionCacheEnabledEnvVarName,
+		DefaultDescriptionCacheEnabled,
+	)
 
 	if count, ok := os.LookupEnv(DescriptionCacheItemCount); ok {
 		cfg.CacheConfig.VulnDescriptionCacheMaxCount, err = strconv.Atoi(count)
 		if err != nil {
-			log.WithFields(log.Fields{"value": count, "key": DescriptionCacheItemCount, "type": "int"}).Error("invalid format for environment variable value")
+			log.WithFields(log.Fields{"value": count, "key": DescriptionCacheItemCount, "type": "int"}).
+				Error("invalid format for environment variable value")
 			return cfg, err
 		}
 	}
@@ -256,7 +260,8 @@ func GetConfig() (AdapterConfig, error) {
 	if ttl, ok := os.LookupEnv(DescriptionCacheTtl); ok {
 		cfg.CacheConfig.VulnDescriptionCacheMaxCount, err = strconv.Atoi(ttl)
 		if err != nil {
-			log.WithFields(log.Fields{"value": ttl, "key": DescriptionCacheTtl, "type": "int"}).Error("invalid format for environment variable value")
+			log.WithFields(log.Fields{"value": ttl, "key": DescriptionCacheTtl, "type": "int"}).
+				Error("invalid format for environment variable value")
 			return cfg, err
 		}
 	}
@@ -266,7 +271,8 @@ func GetConfig() (AdapterConfig, error) {
 	if count, ok := os.LookupEnv(ReportCacheItemCount); ok {
 		cfg.CacheConfig.VulnReportCacheMaxCount, err = strconv.Atoi(count)
 		if err != nil {
-			log.WithFields(log.Fields{"value": count, "key": ReportCacheItemCount, "type": "int"}).Error("invalid format for environment variable value")
+			log.WithFields(log.Fields{"value": count, "key": ReportCacheItemCount, "type": "int"}).
+				Error("invalid format for environment variable value")
 			return cfg, err
 		}
 	}
@@ -274,7 +280,8 @@ func GetConfig() (AdapterConfig, error) {
 	if ttl, ok := os.LookupEnv(ReportCacheTtl); ok {
 		cfg.CacheConfig.VulnReportCacheMaxCount, err = strconv.Atoi(ttl)
 		if err != nil {
-			log.WithFields(log.Fields{"value": ttl, "key": ReportCacheTtl, "type": "int"}).Error("invalid format for environment variable value")
+			log.WithFields(log.Fields{"value": ttl, "key": ReportCacheTtl, "type": "int"}).
+				Error("invalid format for environment variable value")
 			return cfg, err
 		}
 	}
@@ -284,7 +291,8 @@ func GetConfig() (AdapterConfig, error) {
 	if ttl, ok := os.LookupEnv(DbUpdateCacheTtl); ok {
 		cfg.CacheConfig.DbUpdatedCacheTTL, err = strconv.Atoi(ttl)
 		if err != nil {
-			log.WithFields(log.Fields{"value": ttl, "key": DbUpdateCacheTtl, "type": "int"}).Error("invalid format for environment variable value")
+			log.WithFields(log.Fields{"value": ttl, "key": DbUpdateCacheTtl, "type": "int"}).
+				Error("invalid format for environment variable value")
 			return cfg, err
 		}
 	}

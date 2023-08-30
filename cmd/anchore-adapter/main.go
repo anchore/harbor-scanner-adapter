@@ -1,11 +1,12 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore"
 	api "github.com/anchore/harbor-scanner-adapter/pkg/http/api/v1"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 )
 
 func main() {
