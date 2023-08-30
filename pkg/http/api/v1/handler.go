@@ -81,7 +81,8 @@ func (h *APIHandler) LoggerMiddleware(next http.Handler) http.Handler {
 			"accept":       r.Header.Get(AcceptHeader),
 			"method":       r.Method,
 			"content-type": r.Header.Get(ContentTypeHeader),
-			"url":          r.URL.String()}).Info("handling request")
+			"url":          r.URL.String(),
+		}).Info("handling request")
 		next.ServeHTTP(w, r)
 	})
 }
@@ -206,6 +207,10 @@ func (h *APIHandler) GetScanReport(res http.ResponseWriter, req *http.Request) {
 			log.Info("valid scanId, but scan not complete")
 			res.Header().Set("Location", req.URL.String())
 			SendErrorResponse(&res, "scan pending", http.StatusFound)
+		} else if err.Error() == "result not ready" {
+			log.Info("valid scanId, but results not ready")
+			res.Header().Set("Location", req.URL.String())
+			SendErrorResponse(&res, "scan pending", http.StatusFound)
 		} else {
 			log.Error("unknown internal error")
 			SendErrorResponse(&res, err.Error(), http.StatusInternalServerError)
@@ -222,8 +227,15 @@ func (h *APIHandler) GetScanReport(res http.ResponseWriter, req *http.Request) {
 	return
 }
 
-func (h *APIHandler) GetHarborVulnerabilityReport(scanId string, includeFullDescriptions bool) (harbor.VulnerabilityReport, error) {
-	return h.scanner.GetHarborVulnerabilityReport(scanId, includeFullDescriptions)
+func (h *APIHandler) GetHarborVulnerabilityReport(
+	scanId string,
+	includeFullDescriptions bool,
+) (harbor.VulnerabilityReport, error) {
+	report, err := h.scanner.GetHarborVulnerabilityReport(scanId, includeFullDescriptions)
+	if err != nil {
+		return harbor.VulnerabilityReport{}, err
+	}
+	return *report, err
 }
 
 func (h *APIHandler) GetRawScanReport(scanId string) (harbor.RawReport, error) {

@@ -4,10 +4,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/client"
-	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
 	"testing"
 	"time"
+
+	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/client"
+	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
 )
 
 func TestStringToTime(t *testing.T) {
@@ -19,7 +20,8 @@ func TestStringToTime(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if s.Year() != 2019 || s.Month() != 10 || s.Day() != 2 || s.Hour() != 18 || s.Minute() != 23 || s.Second() != 16 || s.Location() != time.UTC {
+	if s.Year() != 2019 || s.Month() != 10 || s.Day() != 2 || s.Hour() != 18 || s.Minute() != 23 || s.Second() != 16 ||
+		s.Location() != time.UTC {
 		t.Error("incorrect time")
 	}
 
@@ -28,7 +30,8 @@ func TestStringToTime(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if s.Year() != 2019 || s.Month() != 10 || s.Day() != 2 || s.Hour() != 7 || s.Minute() != 57 || s.Second() != 46 || s.Location() != time.UTC {
+	if s.Year() != 2019 || s.Month() != 10 || s.Day() != 2 || s.Hour() != 7 || s.Minute() != 57 || s.Second() != 46 ||
+		s.Location() != time.UTC {
 		t.Error("incorrect time")
 	}
 }
@@ -56,10 +59,25 @@ func TestGetUsernamePassword(t *testing.T) {
 
 func TestScanIdToRegistryDigest(t *testing.T) {
 	inputs := [][]string{
-		{"test:5000", "/project1/repo1/image", "sha256:4214707ec3ec157f9566258710e274824a0b6a8e34051bd081d9192900d06647", "true"},
+		{
+			"test:5000",
+			"/project1/repo1/image",
+			"sha256:4214707ec3ec157f9566258710e274824a0b6a8e34051bd081d9192900d06647",
+			"true",
+		},
 		{"test", "/project1/repo1/image", "sha256:4214707ec3ec157f9566258710e274824a0b6a8e34051bd081d9192900d06647", "true"},
-		{"test.com:5000", "/project1/repo1/image", "sha256:4214707ec3ec157f9566258710e274824a0b6a8e34051bd081d9192900d06647", "true"},
-		{"something.test.com:5000", "/project1/repo1/image", "sha256:4214707ec3ec157f9566258710e274824a0b6a8e34051bd081d9192900d06647", "true"},
+		{
+			"test.com:5000",
+			"/project1/repo1/image",
+			"sha256:4214707ec3ec157f9566258710e274824a0b6a8e34051bd081d9192900d06647",
+			"true",
+		},
+		{
+			"something.test.com:5000",
+			"/project1/repo1/image",
+			"sha256:4214707ec3ec157f9566258710e274824a0b6a8e34051bd081d9192900d06647",
+			"true",
+		},
 		{"test:5000", "/project1/repo1/image", "4214707ec3ec157f9566258710e274824a0b6a8e34051bd081d9192900d06647", "false"},
 		{"test:5000", "/project1/repo1/image", "sha256:", "false"},
 	}
@@ -126,7 +144,7 @@ func TestToHarborDescription(t *testing.T) {
 	anchoreVuln := anchore.Vulnerability{
 		VulnerabilityID: "CVE-123",
 		VendorData: []anchore.VendorData{
-			anchore.VendorData{
+			{
 				Id: "CVE-123",
 				CVSSv2Score: anchore.CVSSScore{
 					BaseScore:           1.0,
@@ -141,7 +159,7 @@ func TestToHarborDescription(t *testing.T) {
 			},
 		},
 		NvdData: []anchore.NvdObject{
-			anchore.NvdObject{
+			{
 				Id: "CVE-123",
 				CVSSv2Score: anchore.CVSSScore{
 					BaseScore:           1.0,
