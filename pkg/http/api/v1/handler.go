@@ -231,6 +231,7 @@ func (h *APIHandler) GetHarborVulnerabilityReport(
 	scanId string,
 	includeFullDescriptions bool,
 ) (harbor.VulnerabilityReport, error) {
+	log.WithFields(log.Fields{"scanId": scanId, "includeFullDescriptions": includeFullDescriptions}).Info("handling request for harbor vulnerability report")
 	report, err := h.scanner.GetHarborVulnerabilityReport(scanId, includeFullDescriptions)
 	if err != nil {
 		return harbor.VulnerabilityReport{}, err
@@ -239,6 +240,7 @@ func (h *APIHandler) GetHarborVulnerabilityReport(
 }
 
 func (h *APIHandler) GetRawScanReport(scanId string) (harbor.RawReport, error) {
+	log.WithFields(log.Fields{"scanId": scanId}).Info("handling request for raw scanner vulnerability report")
 	return h.scanner.GetRawVulnerabilityReport(scanId)
 }
 

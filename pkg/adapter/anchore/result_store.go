@@ -54,8 +54,12 @@ func (m MemoryResultStore) HasResult(scanId string) bool {
 func (m MemoryResultStore) PopResult(scanId string) (VulnerabilityResult, bool) {
 	found, ok := m.Results[scanId]
 	if found.IsComplete {
+		log.WithField("scanId", scanId).Debug("found completed result and removing from store to return to caller")
 		delete(m.Results, scanId)
+	} else {
+		log.WithField("scanId", scanId).Debug("found result in store, but not complete, so not removing from store")
 	}
+
 	return found, ok
 }
 
@@ -84,14 +88,14 @@ func (m MemoryResultStore) RequestResult(
 }
 
 func (m MemoryResultStore) resultRetriever() {
-	log.Info("starting result fetch loop")
 	for true {
 		report := <-resultChannel
+		log.WithFields(log.Fields{"scanId": report.ScanId, "isComplete": report.IsComplete, "reportError": report.Error}).Debug("scan result added to result store")
 		m.Results[report.ScanId] = report
 	}
 }
 
 func (m MemoryResultStore) Start() {
-	// Start the retreiver loop
+	log.Info("starting result fetch loop")
 	go m.resultRetriever()
 }
