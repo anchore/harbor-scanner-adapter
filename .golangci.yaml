@@ -1,0 +1,57 @@
+run:
+  timeout: 2m
+  skip-dirs:
+     - .circleci
+     - .github
+     - scripts
+linters:
+  # inverted configuration with `enable-all` and `disable` is not scalable during updates of golangci-lint
+  disable-all: true
+  enable:
+    - asciicheck
+    - bodyclose
+    - dupl
+    - errcheck
+    - errorlint
+    - exportloopref
+    - funlen
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - tparallel
+    - importas
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - nolintlint
+    - revive
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+linters-settings:
+  funlen:
+    # Checks the number of lines in a function.
+    # If lower than 0, disable the check.
+    # Default: 60
+    lines: 70
+    # Checks the number of statements in a function.
+    # If lower than 0, disable the check.
+    # Default: 40
+    statements: 50
+output:
+  uniq-by-line: false
+issues:
+  exclude-rules:
+    - path: (.+)_test.go
+      linters:
+        - funlen
+        - dupl
+        - goconst
