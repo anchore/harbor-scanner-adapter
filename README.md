@@ -13,6 +13,11 @@ This Adapter is only required if you want Harbor to use Anchore for its 'Scan' f
 workflow or to provide its own analysis reports against images stored in Harbor, that can be achieved without this Adapter.
 
 
+
+>**:construction: Note:** 
+> 
+> This sequence diagram is no longer quite accurate. The calls are correct, but in recent updates they are done asynchronously and are stored by a result store that is not yet added to this diagram
+
 ![Interaction Overview](assets/AnchoreHarborAdapter.png)
 
 ### Authentication

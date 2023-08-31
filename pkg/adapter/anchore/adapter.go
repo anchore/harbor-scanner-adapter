@@ -40,18 +40,19 @@ func cacheKeyForVuln(v *anchore.NamespacedVulnerability) string {
 func NewScannerAdapter(cfg *AdapterConfig) (adapter.ScannerAdapter, error) {
 	err := InitCaches(cfg.CacheConfig)
 	if err != nil {
-		log.Errorf("could not initialized caches as configuration requested: %s", err)
+		log.WithFields(log.Fields{"err": err, "config": cfg.CacheConfig}).Errorf("could not initialized caches as configuration requested")
 		return nil, err
 	}
 	return &HarborScannerAdapter{cfg}, nil
 }
 
-// Create a scan id from the input image properties
+// GenerateScanId Create a scan id from the input image properties
 func GenerateScanId(repository string, digest string) (string, error) {
 	scanId := base64.URLEncoding.EncodeToString([]byte(fmt.Sprintf(`%s@%s`, repository, digest)))
 	return scanId, nil
 }
 
+// ScanIdToRegistryDigest Inverse of GenerateScanId, gets the image components from the input ID
 func ScanIdToRegistryDigest(scanId string) (string, string, error) {
 	unsplit, err := base64.URLEncoding.DecodeString(scanId)
 	if err != nil {
@@ -71,7 +72,7 @@ func ScanIdToRegistryDigest(scanId string) (string, string, error) {
 			return "", "", fmt.Errorf("invalid digest format")
 		}
 	}
-	log.WithFields(log.Fields{"input": scanId, "repository": parts[0], "digest": parts[1]}).Debug("parsed scanId")
+	log.WithFields(log.Fields{"scanId": scanId, "repository": parts[0], "imageDigest": parts[1]}).Debug("parsed scanId")
 	return parts[0], parts[1], nil
 }
 
@@ -104,7 +105,7 @@ func ScanToAnchoreRequest(req harbor.ScanRequest) (*anchore.ImageScanRequest, er
 	return anchoreReq, nil
 }
 
-// Returns the username and password from an authorizatino header input value (Harbor sends a single value
+// GetUsernamePassword Returns the username and password from an authorizatino header input value (Harbor sends a single value
 // The expected authorization value is of format "Basic b64(username:password)"
 func GetUsernamePassword(authorizationInput string) (string, string, error) {
 	var authzValue string
@@ -129,7 +130,7 @@ func GetUsernamePassword(authorizationInput string) (string, string, error) {
 	return parts[0], parts[1], nil
 }
 
-// Add credentials to Anchore for authorizing the image fetch
+// EnsureRegistryCredentials Add credentials to Anchore for authorizing the image fetch
 func (s *HarborScannerAdapter) EnsureRegistryCredentials(
 	registryUrl string,
 	repository string,
@@ -161,7 +162,7 @@ func (s *HarborScannerAdapter) EnsureRegistryCredentials(
 
 		// Check if a PUT is needed
 		if anchoreError.Message == "registry already exists in DB" {
-			log.WithField("msg", anchoreError.Message).Debug("updating registry credential since one already exists")
+			log.WithField("msg", anchoreError.Message).Debug("updating registry credential since one already exists but may be expired")
 
 			// Do update
 			resp, body, errs = client.UpdateRegistryCredential(
@@ -178,7 +179,7 @@ func (s *HarborScannerAdapter) EnsureRegistryCredentials(
 				return errs[0]
 			}
 			if resp.StatusCode != http.StatusOK {
-				log.WithFields(log.Fields{"errorMessage": anchoreError.Message, "registry": registryUrl, "repository": repository}).
+				log.WithFields(log.Fields{"ErrorMessage": anchoreError.Message, "Registry": registryUrl, "repository": repository}).
 					Error("unexpected response from anchore api. credential update not successful")
 				return fmt.Errorf("unexpected response on registry credential update from anchore api: %v", resp.StatusCode)
 			}
@@ -199,25 +200,33 @@ func (s *HarborScannerAdapter) EnsureRegistryCredentials(
 func (s *HarborScannerAdapter) Scan(req harbor.ScanRequest) (harbor.ScanResponse, error) {
 	scanId, err := GenerateScanId(req.Artifact.Repository, req.Artifact.Digest)
 	if err != nil {
+		log.Errorf("error encountered generating ScanId from Harbor scan request: %s", err)
 		return harbor.ScanResponse{}, err
 	}
 
-	if !s.Configuration.UseAnchoreConfiguredCreds && req.Registry.Authorization != "" {
-		username, password, err2 := GetUsernamePassword(req.Registry.Authorization)
-		if err2 != nil {
-			return harbor.ScanResponse{}, err2
-		}
+	log.WithFields(log.Fields{"scanId": scanId, "repository": req.Artifact.Repository, "artifactDigest": req.Artifact.Digest, "artifactTag": req.Artifact.Tag}).Debug("generated ScanId")
 
-		// Add the credentials for the repository to be scanned
-		err = s.EnsureRegistryCredentials(req.Registry.URL, req.Artifact.Repository, username, password)
-		if err != nil {
-			return harbor.ScanResponse{}, err
-		}
+	tokenLength := len(req.Registry.Authorization)
+
+	if s.Configuration.UseAnchoreConfiguredCreds {
+		log.WithFields(log.Fields{"scanId": scanId, "UseAnchoreConfiguredCredentials": s.Configuration.UseAnchoreConfiguredCreds, "ScanRequestTokenLength": tokenLength}).Debug("Skipping adding Harbor authz token to Anchore due to adapter configuration")
 	} else {
-		if s.Configuration.UseAnchoreConfiguredCreds {
-			log.Info("Skipping adding Harbor authz token to Anchore due to adapter configuration")
+		if req.Registry.Authorization == "" {
+			log.WithFields(log.Fields{"scanId": scanId, "UseAnchoreConfiguredCredentials": s.Configuration.UseAnchoreConfiguredCreds, "ScanRequestTokenLength": tokenLength}).Debug("Skipping adding Harbor authz token to Anchore due to no token provided in request")
 		} else {
-			log.Info("Skipping adding Harbor authz token to Anchore due to no token provided in request")
+			log.WithFields(log.Fields{"scanId": scanId, "UseAnchoreConfiguredCredentials": s.Configuration.UseAnchoreConfiguredCreds}).Debug("ensuring Anchore deployment has credentials for retrieving the image to scan")
+			username, password, err2 := GetUsernamePassword(req.Registry.Authorization)
+			if err2 != nil {
+				log.WithFields(log.Fields{"scanId": scanId, "UseAnchoreConfiguredCredentials": s.Configuration.UseAnchoreConfiguredCreds}).Error("could not extract credentials for image pull access from the scan request authorization field")
+				return harbor.ScanResponse{}, err2
+			}
+
+			// Add the credentials for the repository to be scanned
+			err = s.EnsureRegistryCredentials(req.Registry.URL, req.Artifact.Repository, username, password)
+			if err != nil {
+				log.WithFields(log.Fields{"scanId": scanId}).Error("failed ensuring that Anchore has authorized access to pull the image from Harbor")
+				return harbor.ScanResponse{}, err
+			}
 		}
 	}
 
@@ -233,13 +242,14 @@ func (s *HarborScannerAdapter) Scan(req harbor.ScanRequest) (harbor.ScanResponse
 		return harbor.ScanResponse{}, err
 	}
 
-	// All ok, so return the scan Id to lookup results
+	log.WithFields(log.Fields{"scanId": scanId, "repository": req.Artifact.Repository, "artifactDigest": req.Artifact.Digest, "artifactTag": req.Artifact.Tag}).Info("scan successfully initiated against Anchore")
+	// All ok, so return the scanId to lookup results
 	return harbor.ScanResponse{
 		ID: scanId,
 	}, nil
 }
 
-// If not ready yet, return empty result
+// GetHarborVulnerabilityReport Return a vulnerability report in Harbor format if available for the requested ScanId. If not ready yet, returns empty result.
 func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(
 	scanId string,
 	includeDescriptions bool,
@@ -253,16 +263,19 @@ func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(
 	if err != nil {
 		return nil, err
 	}
+
+	log.WithFields(log.Fields{"scanId": scanId, "imageState": imageState, "imageDigest": imageDigest, "imageRepository": imageRepository}).Debug("image analysis state check")
+
 	if imageState != Analyzed {
+		log.WithFields(log.Fields{"scanId": scanId, "imageState": imageState, "imageDigest": imageDigest, "imageRepository": imageRepository}).Info("image analysis not completed yet")
 		return &harbor.VulnerabilityReport{}, fmt.Errorf("analysis not complete")
 	}
 
 	result, ok := resultStore.PopResult(scanId)
+	log.WithFields(log.Fields{"scanId": scanId, "resultRecordFound": ok}).Debug("checked result store for scan Id result")
 
 	if ok {
-		log.Debug("Found result in cache")
-		log.Debug("Result Complete?: ", result.IsComplete)
-		log.Debug("Result Error?: ", result.Error)
+		log.WithFields(log.Fields{"scanId": scanId, "resultIsComplete": result.IsComplete, "resultError": result.Error}).Debug("checked result store for scan Id result")
 		if result.IsComplete {
 			return result.Result, result.Error
 		} else {
@@ -279,6 +292,7 @@ func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(
 			return &rep, err
 		}
 
+		log.WithField("scanId", scanId).Info("no existing result store entry found for scanId, creating a new one")
 		requestResult := resultStore.RequestResult(scanId, fn)
 		if requestResult.Error != nil {
 			return nil, requestResult.Error
@@ -297,13 +311,13 @@ const (
 )
 
 func GetImageState(imageDigest string, clientConfig *client.ClientConfig) (ImageState, error) {
-	log.WithField("digest", imageDigest).Debug("checking vulnerability report cache")
+	log.WithField("imageDigest", imageDigest).Debug("checking vulnerability report cache")
 	_, ok := ReportCache.Get(imageDigest)
 	if ok {
-		log.WithField("digest", imageDigest).Debug("found report in cache")
+		log.WithField("imageDigest", imageDigest).Debug("found report in cache")
 		return Analyzed, nil
 	} else {
-		log.WithField("digest", imageDigest).Debug("no report in cache, generating")
+		log.WithField("imageDigest", imageDigest).Debug("no report in cache, generating")
 	}
 
 	img, err := client.GetImage(clientConfig, imageDigest)
@@ -314,19 +328,19 @@ func GetImageState(imageDigest string, clientConfig *client.ClientConfig) (Image
 		// Unusual case, should be 404, but just in case to ensure correct array access
 		return NotFound, fmt.Errorf("not found")
 	}
+	if len(img) > 1 {
+		log.WithFields(log.Fields{"imageDigest": imageDigest, "imageCount": len(img)}).Warn("image status check returned more than one expected record. using the first")
+	}
 
+	log.WithFields(log.Fields{"imageDigest": imageDigest, "analysis_status": img[0].AnalysisStatus}).Debug("image analysis status")
 	switch img[0].AnalysisStatus {
 	case "analyzed":
-		log.Debug("found analyzed image")
 		return Analyzed, nil
 	case "analysis_failed":
-		log.Debug("analysis failed")
 		return AnalysisFailed, nil
 	case "analyzing":
-		log.Debug("analysis pending")
 		return Analyzing, nil
 	case "not_analyzed":
-		log.Debug("analysis pending")
 		return Analyzing, nil
 	default:
 		state := img[0].AnalysisStatus
@@ -335,7 +349,7 @@ func GetImageState(imageDigest string, clientConfig *client.ClientConfig) (Image
 	}
 }
 
-// Construct the harbor report type from an assumed-analyzed image
+// BuildHarborVulnerabilityReport Construct the harbor-formatted vulnerability report from an analyzed image in Anchore
 func BuildHarborVulnerabilityReport(
 	imageRepository string,
 	imageDigest string,
@@ -346,14 +360,18 @@ func BuildHarborVulnerabilityReport(
 	if imageRepository == "" || imageDigest == "" {
 		return harbor.VulnerabilityReport{}, errors.New("no repository or digest provided to build vuln report for")
 	} else {
-		log.WithFields(log.Fields{"repository": imageRepository, "digest": imageDigest}).Info("getting harbor vulnerability report")
+		log.WithFields(log.Fields{"repository": imageRepository, "imageDigest": imageDigest}).Debug("getting harbor vulnerability report")
 	}
 
+	start := time.Now()
 	anchoreVulnResponse, err := GetAnchoreVulnReport(imageDigest, clientConfig, filterVendorIgnoredVulns)
 	if err != nil {
-		log.Error("error from vulnerability report api call to Anchore")
+		log.WithFields(log.Fields{"repository": imageRepository, "imageDigest": imageDigest}).Error("error from vulnerability report api call to Anchore")
 		return harbor.VulnerabilityReport{}, err
 	}
+
+	vulnListingTime := time.Since(start)
+	log.WithFields(log.Fields{"repository": imageRepository, "imageDigest": imageDigest, "vulnerabilityListApiCallDuration": vulnListingTime}).Debug("time to get vulnerability listing")
 
 	vulnDescriptionMap := make(map[string]string)
 
@@ -404,12 +422,12 @@ func BuildHarborVulnerabilityReport(
 		}
 
 		descriptionTime := time.Since(start)
-		log.WithFields(log.Fields{"duration": descriptionTime}).Debug("time to get descriptions")
+		log.WithFields(log.Fields{"repository": imageRepository, "imageDigest": imageDigest, "vulnerabilityDescriptionConstructionDuration": descriptionTime}).Debug("time to get descriptions")
 	} else {
 		log.Debug("Skipping vuln description merge, as dictated by configuration")
 	}
 
-	log.Debug("Finished Building Report!!")
+	log.WithFields(log.Fields{"repository": imageRepository, "imageDigest": imageDigest}).Debug("finished fetching Anchore data to construct scan result")
 	return ToHarborScanResult(imageRepository, anchoreVulnResponse, vulnDescriptionMap)
 }
 
@@ -441,16 +459,15 @@ func GetAnchoreVulnReport(
 
 	report, err := client.GetImageVulnerabilities(clientConfig, digest, filterVendorIgnoredVulns)
 	if err == nil {
-		log.WithField("digest", digest).Debug("caching result report")
+		log.WithField("imageDigest", digest).Debug("caching result report")
 		ReportCache.Add(digest, report)
 	}
 
 	return report, err
 }
 
-// update method and parameter passed in
+// GetRawVulnerabilityReport Get an adapter-native (Anchore) formatted vulnerability report for the requested ScanId
 func (s *HarborScannerAdapter) GetRawVulnerabilityReport(scanId string) (harbor.RawReport, error) {
-	log.Info("Getting raw report for scanId: ", scanId)
 	if scanId == "" {
 		return harbor.VulnerabilityReport{}, errors.New("no ScanId")
 	}
@@ -458,14 +475,13 @@ func (s *HarborScannerAdapter) GetRawVulnerabilityReport(scanId string) (harbor.
 	repository, digest, err := ScanIdToRegistryDigest(scanId)
 	if err != nil {
 		return harbor.VulnerabilityReport{}, err
-	} else {
-		log.WithFields(log.Fields{"repository": repository, "digest": digest}).Info("getting raw vulnerability report")
 	}
 
+	log.WithFields(log.Fields{"repository": repository, "imageDigest": digest, "scanId": scanId}).Info("Getting raw Anchore-formatted vulnerability report")
 	return GetAnchoreVulnReport(digest, &s.Configuration.AnchoreClientConfig, s.Configuration.FullVulnerabilityDescriptions)
 }
 
-// Convert the Anchore vuln to a harbor description
+// ToHarborDescription Convert the Anchore Vulnerability record to a harbor description string
 func ToHarborDescription(anchoreVuln *anchore.Vulnerability) (string, error) {
 	var CVSSv3 float64
 	var CVSSv2 float64
@@ -584,7 +600,7 @@ func (s *HarborScannerAdapter) GetMetadata() (harbor.ScannerAdapterMetadata, err
 	// Cache result
 	UpdateTimestampCache.Add("db", feedsUpdated)
 
-	log.WithField("db_update_timestamp", feedsUpdated).Debug("vulnerability DB update timestamp retrieved")
+	log.WithField("VulnerabilityDbUpdateTimestamp", feedsUpdated).Debug("vulnerability DB update timestamp retrieved")
 	adapterMeta.Properties[adapter.HarborMetadataVulnDbUpdateKey] = feedsUpdated.Format(time.RFC3339)
 	return adapterMeta, nil
 }
