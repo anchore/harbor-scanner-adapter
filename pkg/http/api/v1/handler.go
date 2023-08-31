@@ -158,12 +158,11 @@ func (h *APIHandler) CreateScan(res http.ResponseWriter, req *http.Request) {
 		log.WithField("err", err).Errorf("failed encoding the scan response")
 		SendErrorResponse(&res, err.Error(), 500)
 	}
-	return
 }
 
 func (h *APIHandler) GetScanReport(res http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-	scanId := vars["scanId"]
+	scanID := vars["scanId"]
 
 	requestedTypes := req.Header[AcceptHeader]
 	numTypes := len(requestedTypes)
@@ -171,20 +170,21 @@ func (h *APIHandler) GetScanReport(res http.ResponseWriter, req *http.Request) {
 	var report interface{}
 	var err error
 
-	if numTypes > 1 {
+	switch {
+	case numTypes > 1:
 		log.Info("No support for multiple types per request, yet")
-	} else if numTypes == 0 || requestedTypes[0] == AllMimeTypes || requestedTypes[0] == "" {
+	case numTypes == 0, requestedTypes[0] == AllMimeTypes, requestedTypes[0] == "":
 		// Default if no Accept set or set to */* then return the harbor report
 		requestedType = HarborVulnReportv1MimeType
-	} else if requestedTypes[0] == HarborVulnReportv1MimeType || requestedTypes[0] == RawVulnReportMimeType {
+	case requestedTypes[0] == HarborVulnReportv1MimeType, requestedTypes[0] == RawVulnReportMimeType:
 		requestedType = requestedTypes[0]
 	}
 
 	switch requestedType {
 	case HarborVulnReportv1MimeType:
-		report, err = h.GetHarborVulnerabilityReport(scanId, h.config.FullVulnerabilityDescriptions)
+		report, err = h.GetHarborVulnerabilityReport(scanID, h.config.FullVulnerabilityDescriptions)
 	case RawVulnReportMimeType:
-		report, err = h.GetRawScanReport(scanId)
+		report, err = h.GetRawScanReport(scanID)
 	default:
 		log.Error("invalid requested report type")
 		SendErrorResponse(&res, "unsupported media tyep", http.StatusBadRequest)
@@ -192,21 +192,22 @@ func (h *APIHandler) GetScanReport(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if err != nil {
-		if err.Error() == "scan failed" {
+		switch err.Error() {
+		case "scan failed":
 			log.Error("Scan failed")
 			SendErrorResponse(&res, "scan failed", http.StatusNotFound)
-		} else if err.Error() == "Not Found" {
+		case "Not Found":
 			log.Error("not found")
 			SendErrorResponse(&res, "no scan found for scanId", http.StatusNotFound)
-		} else if err.Error() == "analysis pending" {
+		case "analysis pending":
 			log.Info("valid scanId, but scan not complete")
 			res.Header().Set("Location", req.URL.String())
 			SendErrorResponse(&res, "scan pending", http.StatusFound)
-		} else if err.Error() == "result not ready" {
+		case "result not ready":
 			log.Info("valid scanId, but results not ready")
 			res.Header().Set("Location", req.URL.String())
 			SendErrorResponse(&res, "scan pending", http.StatusFound)
-		} else {
+		default:
 			log.Error("unknown internal error")
 			SendErrorResponse(&res, err.Error(), http.StatusInternalServerError)
 		}
@@ -219,25 +220,24 @@ func (h *APIHandler) GetScanReport(res http.ResponseWriter, req *http.Request) {
 		log.WithField("err", err).Error("failed encoding the scan response")
 		SendErrorResponse(&res, err.Error(), 500)
 	}
-	return
 }
 
 func (h *APIHandler) GetHarborVulnerabilityReport(
-	scanId string,
+	scanID string,
 	includeFullDescriptions bool,
 ) (harbor.VulnerabilityReport, error) {
-	log.WithFields(log.Fields{"scanId": scanId, "includeFullDescriptions": includeFullDescriptions}).
+	log.WithFields(log.Fields{"scanID": scanID, "includeFullDescriptions": includeFullDescriptions}).
 		Info("handling request for harbor vulnerability report")
-	report, err := h.scanner.GetHarborVulnerabilityReport(scanId, includeFullDescriptions)
+	report, err := h.scanner.GetHarborVulnerabilityReport(scanID, includeFullDescriptions)
 	if err != nil {
 		return harbor.VulnerabilityReport{}, err
 	}
 	return *report, err
 }
 
-func (h *APIHandler) GetRawScanReport(scanId string) (harbor.RawReport, error) {
-	log.WithFields(log.Fields{"scanId": scanId}).Info("handling request for raw scanner vulnerability report")
-	return h.scanner.GetRawVulnerabilityReport(scanId)
+func (h *APIHandler) GetRawScanReport(scanID string) (harbor.RawReport, error) {
+	log.WithFields(log.Fields{"scanID": scanID}).Info("handling request for raw scanner vulnerability report")
+	return h.scanner.GetRawVulnerabilityReport(scanID)
 }
 
 func ValidateMetadataRequest(req *http.Request) error {
@@ -265,10 +265,10 @@ func (h *APIHandler) GetMetadata(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	SendJsonResponse(&res, resp, MetadataResponseMimeType)
+	SendJSONResponse(&res, resp, MetadataResponseMimeType)
 }
 
-func SendJsonResponse(res *http.ResponseWriter, obj interface{}, contentType string) {
+func SendJSONResponse(res *http.ResponseWriter, obj interface{}, contentType string) {
 	log.Info("sending json response")
 	(*res).Header().Set(ContentTypeHeader, contentType)
 	err := json.NewEncoder(*res).Encode(obj)
@@ -276,7 +276,6 @@ func SendJsonResponse(res *http.ResponseWriter, obj interface{}, contentType str
 		log.WithField("err", err).Error("error json encoding the response")
 		SendErrorResponse(res, "error encoding response object", http.StatusInternalServerError)
 	}
-	return
 }
 
 func SendErrorResponse(res *http.ResponseWriter, message string, code int) {
@@ -292,5 +291,4 @@ func SendErrorResponse(res *http.ResponseWriter, message string, code int) {
 		resp.Header().Set(ContentTypeHeader, "text/plain")
 		http.Error(resp, message, code)
 	}
-	return
 }
