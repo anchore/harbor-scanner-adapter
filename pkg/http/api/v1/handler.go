@@ -14,23 +14,18 @@ import (
 )
 
 const (
-	AcceptHeader                  = "Accept"
-	ContentTypeHeader             = "Content-Type"
-	AuthorizationHeader           = "Authorization"
-	BearerTokenPrefix             = "bearer"
-	AllMimeTypes                  = "*/*"
-	JSONRequestMimeType           = "application/json"
-	HarborVulnReportv1MimeType    = "application/vnd.scanner.adapter.vuln.report.harbor+json; version=1.0"
-	RawVulnReportMimeType         = "application/vnd.scanner.adapter.vuln.report.raw+json"
-	DockerImageMimeType           = "application/vnd.docker.distribution.manifest.v2+json"
-	OciImageMimeType              = "application/vnd.oci.image.manifest.v1+json"
-	HarborMetadataVulnDbUpdateKey = "harbor.scanner-adapter/vulnerability-database-updated-at"
-	HarborMetadataScannerTypeKey  = "harbor.scanner-adapter/scanner-type"
-	AdapterType                   = "os-package-vulnerability"
-	ScanRequestMimeType           = "application/vnd.scanner.adapter.scan.request+json; version=1.0"
-	ScanResponseMimeType          = "application/vnd.scanner.adapter.scan.response+json; version=1.0"
-	MetadataResponseMimeType      = "application/vnd.scanner.adapter.metadata+json; version=1.0"
-	ErrorResponseMimeType         = "application/vnd.scanner.adapter.error+json; version=1.0"
+	AcceptHeader               = "Accept"
+	ContentTypeHeader          = "Content-Type"
+	AuthorizationHeader        = "Authorization"
+	BearerTokenPrefix          = "bearer"
+	AllMimeTypes               = "*/*"
+	JSONRequestMimeType        = "application/json"
+	HarborVulnReportv1MimeType = "application/vnd.scanner.adapter.vuln.report.harbor+json; version=1.0"
+	RawVulnReportMimeType      = "application/vnd.scanner.adapter.vuln.report.raw+json"
+	ScanRequestMimeType        = "application/vnd.scanner.adapter.scan.request+json; version=1.0"
+	ScanResponseMimeType       = "application/vnd.scanner.adapter.scan.response+json; version=1.0"
+	MetadataResponseMimeType   = "application/vnd.scanner.adapter.metadata+json; version=1.0"
+	ErrorResponseMimeType      = "application/vnd.scanner.adapter.error+json; version=1.0"
 )
 
 type APIHandler struct {
