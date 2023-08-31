@@ -11,6 +11,10 @@ builds:
       - CGO_ENABLED=0
     goarch: 
       - amd64
+      - arm64
+    goos:
+      - linux
+      - darwin
 checksum:
   name_template: 'checksums.txt'
 snapshot:
