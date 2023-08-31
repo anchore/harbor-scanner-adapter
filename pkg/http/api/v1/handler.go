@@ -117,7 +117,7 @@ func ValidateScanRequest(req *harbor.ScanRequest) error {
 	}
 
 	if req.Artifact.Digest == "" {
-		return fmt.Errorf("emtpy digest")
+		return fmt.Errorf("empty digest")
 	}
 
 	if req.Artifact.Repository == "" {
