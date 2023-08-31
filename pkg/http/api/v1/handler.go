@@ -231,7 +231,8 @@ func (h *APIHandler) GetHarborVulnerabilityReport(
 	scanId string,
 	includeFullDescriptions bool,
 ) (harbor.VulnerabilityReport, error) {
-	log.WithFields(log.Fields{"scanId": scanId, "includeFullDescriptions": includeFullDescriptions}).Info("handling request for harbor vulnerability report")
+	log.WithFields(log.Fields{"scanId": scanId, "includeFullDescriptions": includeFullDescriptions}).
+		Info("handling request for harbor vulnerability report")
 	report, err := h.scanner.GetHarborVulnerabilityReport(scanId, includeFullDescriptions)
 	if err != nil {
 		return harbor.VulnerabilityReport{}, err
@@ -284,7 +285,7 @@ func SendJsonResponse(res *http.ResponseWriter, obj interface{}, contentType str
 }
 
 func SendErrorResponse(res *http.ResponseWriter, message string, code int) {
-	log.WithFields(log.Fields{"message": message, "code": code}).Error("returning error response")
+	log.WithFields(log.Fields{"message": message, "code": code}).Info("returning error response")
 	resp := *res
 	resp.Header().Set(ContentTypeHeader, ErrorResponseMimeType)
 	errResp := harbor.ErrorResponse{Error: harbor.Error{Message: message}}
