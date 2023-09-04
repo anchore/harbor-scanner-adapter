@@ -45,7 +45,10 @@ func getNewRequest(clientConfiguration *ClientConfig) *gorequest.SuperAgent {
 	clientConfiguration.Password = credenitalLoader.LoadFromCredentialStore(passwordConfig)
 
 	timeout := time.Duration(clientConfiguration.TimeoutSeconds) * time.Second
-	return gorequest.New().TLSClientConfig(&tls.Config{InsecureSkipVerify: clientConfiguration.TLSVerify}).SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password).Timeout(timeout)
+	return gorequest.New().
+		TLSClientConfig(&tls.Config{InsecureSkipVerify: clientConfiguration.TLSVerify}).
+		SetBasicAuth(clientConfiguration.Username, clientConfiguration.Password).
+		Timeout(timeout)
 }
 
 // Handle error responses generically
@@ -54,13 +57,13 @@ func unmarshalError(body []byte, response gorequest.Response) (anchore.Error, er
 
 	if response != nil && response.Header.Get("Content-Type") == "application/problem+json" {
 		// Try to unmarshal a json problem and map to anchore error
-		jsonError := anchore.ApplicationJsonError{}
+		jsonError := anchore.ApplicationJSONError{}
 		err := json.Unmarshal(body, &jsonError)
 		if err != nil {
 			return anchore.Error{}, err
 		}
 		result.Message = jsonError.Title
-		result.HttpCode = response.StatusCode
+		result.HTTPCode = response.StatusCode
 		result.Detail["title"] = jsonError.Title
 		result.Detail["detail"] = jsonError.Detail
 		result.Detail["type"] = jsonError.Type
@@ -74,7 +77,7 @@ func unmarshalError(body []byte, response gorequest.Response) (anchore.Error, er
 			// Do a very raw decode
 			if response != nil {
 				result.Message = string(body)
-				result.HttpCode = response.StatusCode
+				result.HTTPCode = response.StatusCode
 			} else {
 				return result, err
 			}
@@ -133,12 +136,14 @@ func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]an
 		namespaces := make(map[string]bool)
 
 		if start < 0 || end > count+1 {
-			log.WithFields(log.Fields{"start": start, "end": end}).Error("vulnerability description chunking returned out-of-bounds indexes. this should not happen")
+			log.WithFields(log.Fields{"start": start, "end": end}).
+				Error("vulnerability description chunking returned out-of-bounds indexes. this should not happen")
 			return fmt.Errorf("error generating vulnerability descriptions")
 		}
 
 		chunkToProcess := (*vulns)[start:end]
-		log.WithFields(log.Fields{"total": count, "start": start, "end": end, "size": len(chunkToProcess)}).Trace("processing chunk of the vuln list")
+		log.WithFields(log.Fields{"total": count, "start": start, "end": end, "size": len(chunkToProcess)}).
+			Trace("processing chunk of the vuln list")
 		for i, v := range chunkToProcess {
 			vulnIds[i] = v.ID
 			namespaces[v.Namespace] = true
@@ -155,8 +160,8 @@ func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]an
 			i++
 		}
 
-		//Split the input array into map[string][]string where key is the Namespace
-		//Then query the system for a single Namespace and populate the result fields
+		// Split the input array into map[string][]string where key is the Namespace
+		// Then query the system for a single Namespace and populate the result fields
 		qryResults, errs := QueryVulnerabilityRecords(clientConfiguration, vulnIds, namespaceNames)
 		if errs != nil {
 			log.WithField("errs", errs).Debug("error getting vuln records")
@@ -189,7 +194,8 @@ func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]an
 
 		// update each with rules
 		if rec, ok := vulnDescriptionMap[vulnRecord.ID]; !ok {
-			log.WithFields(log.Fields{"vulnerabilityId": vulnRecord.ID, "namespace": vulnRecord.Namespace}).Debug("no vulnerability record in anchore api vulnerability metadata query results")
+			log.WithFields(log.Fields{"vulnerabilityId": vulnRecord.ID, "namespace": vulnRecord.Namespace}).
+				Debug("no vulnerability record in anchore api vulnerability metadata query results")
 			continue
 		} else {
 
@@ -222,7 +228,11 @@ func GetVulnerabilityDescriptions(clientConfiguration *ClientConfig, vulns *[]an
 }
 
 // Simple query that handles pagination and returns the results
-func QueryVulnerabilityRecords(clientConfiguration *ClientConfig, ids []string, namespaces []string) (anchore.VulnerabilityQueryResults, []error) {
+func QueryVulnerabilityRecords(
+	clientConfiguration *ClientConfig,
+	ids []string,
+	namespaces []string,
+) (anchore.VulnerabilityQueryResults, []error) {
 	var page string
 	var vulnListing anchore.VulnerabilityQueryResults
 	var vulnPage anchore.VulnerabilityQueryResults
@@ -252,7 +262,6 @@ func QueryVulnerabilityRecords(clientConfiguration *ClientConfig, ids []string, 
 		if errs != nil {
 			return vulnListing, errs
 		} else {
-
 			if resp.StatusCode == 200 {
 				err := json.Unmarshal(body, &vulnPage)
 				if err != nil {
@@ -305,7 +314,11 @@ func getVulnProcessingChunks(itemCount, chunkToGet, chunkSize int) (int, int) {
 }
 
 // Retrieve the vulnerabilities
-func GetImageVulnerabilities(clientConfiguration *ClientConfig, digest string, filterIgnored bool) (anchore.ImageVulnerabilityReport, error) {
+func GetImageVulnerabilities(
+	clientConfiguration *ClientConfig,
+	digest string,
+	filterIgnored bool,
+) (anchore.ImageVulnerabilityReport, error) {
 	log.WithFields(log.Fields{"digest": digest, "filterIgnored": filterIgnored}).Debug("retrieving scan result for image")
 
 	var imageVulnerabilityReport anchore.ImageVulnerabilityReport
@@ -330,7 +343,6 @@ func GetImageVulnerabilities(clientConfiguration *ClientConfig, digest string, f
 	} else {
 		return imageVulnerabilityReport, fmt.Errorf("error response from anchore api")
 	}
-
 }
 
 func GetImage(clientConfiguration *ClientConfig, digest string) (anchore.ImageList, error) {
@@ -379,14 +391,14 @@ func GetVulnDbUpdateTime(clientConfiguration *ClientConfig) (time.Time, error) {
 	}
 
 	if len(feedsResp) > 0 {
-		var newestSync = time.Time{}
+		newestSync := time.Time{}
 
 		for _, feed := range feedsResp {
 			for _, group := range feed.Groups {
 				ts := group.LastSync
 				if ts != "" {
 
-					//Adjust the time to ensure it has trailing Z for UTC
+					// Adjust the time to ensure it has trailing Z for UTC
 					if ts[len(ts)-1] != 'Z' {
 						ts = ts + "Z"
 					}
@@ -457,7 +469,15 @@ func buildUrl(config ClientConfig, requestPathTemplate string, args []interface{
 }
 
 // Add a new registry credential to anchore
-func AddRegistryCredential(clientConfiguration *ClientConfig, registryUrl string, repository string, username string, password string, registryTLSVerify bool, validateCreds bool) (gorequest.Response, []byte, []error) {
+func AddRegistryCredential(
+	clientConfiguration *ClientConfig,
+	registryUrl string,
+	repository string,
+	username string,
+	password string,
+	registryTLSVerify bool,
+	validateCreds bool,
+) (gorequest.Response, []byte, []error) {
 	request := getNewRequest(clientConfiguration)
 	registryName, err := RegistryNameFromRepo(registryUrl, repository)
 	if err != nil {
@@ -469,13 +489,26 @@ func AddRegistryCredential(clientConfiguration *ClientConfig, registryUrl string
 		return nil, nil, []error{err}
 	}
 
-	var payload = fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password, registryTLSVerify)
+	payload := fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password, registryTLSVerify)
 
-	return sendRequest(request.Post(registryAddUrl).Set("Content-Type", "application/json").Param("validate", strconv.FormatBool(validateCreds)).Send(payload))
+	return sendRequest(
+		request.Post(registryAddUrl).
+			Set("Content-Type", "application/json").
+			Param("validate", strconv.FormatBool(validateCreds)).
+			Send(payload),
+	)
 }
 
 // Update an existing credential record
-func UpdateRegistryCredential(clientConfiguration *ClientConfig, registryUrl string, repository string, username string, password string, registryTLSVerify bool, validateCreds bool) (gorequest.Response, []byte, []error) {
+func UpdateRegistryCredential(
+	clientConfiguration *ClientConfig,
+	registryUrl string,
+	repository string,
+	username string,
+	password string,
+	registryTLSVerify bool,
+	validateCreds bool,
+) (gorequest.Response, []byte, []error) {
 	request := getNewRequest(clientConfiguration)
 	registryName, err := RegistryNameFromRepo(registryUrl, repository)
 	if err != nil {
@@ -491,15 +524,21 @@ func UpdateRegistryCredential(clientConfiguration *ClientConfig, registryUrl str
 	// Use query escape instead of path to ensure that ':' is encoded for ports. This not quite spec, but Anchore API expects it to be encoded
 	u.Path = path.Join(u.Path, fmt.Sprintf(RegistryCredentialUpdateURLTemplate, registryName))
 
-	var payload = fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password, registryTLSVerify)
+	payload := fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password, registryTLSVerify)
 
-	return sendRequest(request.Put(u.String()).Set("Content-Type", "application/json").Param("validate", strconv.FormatBool(validateCreds)).Send(payload))
+	return sendRequest(
+		request.Put(u.String()).
+			Set("Content-Type", "application/json").
+			Param("validate", strconv.FormatBool(validateCreds)).
+			Send(payload),
+	)
 }
 
 func logResponse(resp gorequest.Response, body []byte, errs []error) (gorequest.Response, []byte, []error) {
 	if errs != nil {
 		if resp != nil {
-			log.WithFields(log.Fields{"status": resp.Status, "statusCode": resp.StatusCode, "errs": errs}).Error("error response from anchore")
+			log.WithFields(log.Fields{"status": resp.Status, "statusCode": resp.StatusCode, "errs": errs}).
+				Error("error response from anchore")
 		} else {
 			log.WithFields(log.Fields{"resp": "nil", "errs": errs}).Error("error response from anchore")
 		}
@@ -510,7 +549,8 @@ func logResponse(resp gorequest.Response, body []byte, errs []error) (gorequest.
 			"statusCode":    resp.StatusCode,
 			"contentLength": resp.ContentLength,
 			"status":        resp.Status,
-			"contentType":   resp.Header.Get("Content-Type")}).Debug("anchore API response")
+			"contentType":   resp.Header.Get("Content-Type"),
+		}).Debug("anchore API response")
 		log.WithFields(log.Fields{"statusCode": resp.StatusCode, "body": string(body)}).Trace("anchore API response content")
 	}
 

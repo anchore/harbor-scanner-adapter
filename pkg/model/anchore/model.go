@@ -27,7 +27,7 @@ type Vulnerability struct {
 }
 
 type NvdObject struct {
-	Id          string    `json:"id"`
+	ID          string    `json:"id"`
 	CVSSv2Score CVSSScore `json:"cvss_v2"`
 	CVSSv3Score CVSSScore `json:"cvss_v3"`
 }
@@ -39,7 +39,7 @@ type CVSSScore struct {
 }
 
 type VendorData struct {
-	Id          string    `json:"id"`
+	ID          string    `json:"id"`
 	CVSSv2Score CVSSScore `json:"cvss_v2"`
 	CVSSv3Score CVSSScore `json:"cvss_v3"`
 }
@@ -88,7 +88,7 @@ type ImageScanRequest struct {
 
 type Error struct {
 	Detail   map[string]interface{} `json:"detail"`
-	HttpCode int                    `json:"httpcode"`
+	HTTPCode int                    `json:"httpcode"`
 	Message  string                 `json:"message"`
 }
 
@@ -107,7 +107,7 @@ type VulnerabilityQueryResults struct {
 }
 
 // fields in response of type application/problem+json (see: https://tools.ietf.org/html/rfc7807)
-type ApplicationJsonError struct {
+type ApplicationJSONError struct {
 	Type     string `json:"type"`
 	Title    string `json:"title"`
 	Status   int    `json:"status"`
