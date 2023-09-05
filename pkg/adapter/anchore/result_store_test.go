@@ -14,7 +14,7 @@ func TestMemoryResultStore_HasResult(t *testing.T) {
 		Results map[string]VulnerabilityResult
 	}
 	type args struct {
-		scanId string
+		scanID string
 	}
 	tests := []struct {
 		name   string
@@ -24,13 +24,13 @@ func TestMemoryResultStore_HasResult(t *testing.T) {
 	}{
 		{
 			name:   "result found and scan complete",
-			fields: fields{Results: map[string]VulnerabilityResult{"test1": {ScanId: "test1", IsComplete: true}}},
+			fields: fields{Results: map[string]VulnerabilityResult{"test1": {ScanID: "test1", IsComplete: true}}},
 			args:   args{"test1"},
 			want:   true,
 		},
 		{
 			name:   "result found and scan incomplete",
-			fields: fields{Results: map[string]VulnerabilityResult{"test1": {ScanId: "test1", IsComplete: false}}},
+			fields: fields{Results: map[string]VulnerabilityResult{"test1": {ScanID: "test1", IsComplete: false}}},
 			args:   args{"test1"},
 			want:   false,
 		},
@@ -46,7 +46,7 @@ func TestMemoryResultStore_HasResult(t *testing.T) {
 			m := MemoryResultStore{
 				Results: tt.fields.Results,
 			}
-			got := m.HasResult(tt.args.scanId)
+			got := m.HasResult(tt.args.scanID)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -57,7 +57,7 @@ func TestMemoryResultStore_PopResult(t *testing.T) {
 		Results map[string]VulnerabilityResult
 	}
 	type args struct {
-		scanId string
+		scanID string
 	}
 	tests := []struct {
 		name                              string
@@ -70,10 +70,10 @@ func TestMemoryResultStore_PopResult(t *testing.T) {
 		{
 			name: "result found and scan complete",
 			fields: fields{
-				Results: map[string]VulnerabilityResult{"test1": {ScanId: "test1", IsComplete: true}},
+				Results: map[string]VulnerabilityResult{"test1": {ScanID: "test1", IsComplete: true}},
 			},
 			args:                              args{"test1"},
-			want:                              VulnerabilityResult{ScanId: "test1", IsComplete: true},
+			want:                              VulnerabilityResult{ScanID: "test1", IsComplete: true},
 			want1:                             true,
 			expectedResultStoreAfterPopResult: fields{Results: map[string]VulnerabilityResult{}},
 		},
@@ -90,13 +90,13 @@ func TestMemoryResultStore_PopResult(t *testing.T) {
 		{
 			name: "result found and scan incomplete",
 			fields: fields{
-				Results: map[string]VulnerabilityResult{"test1": {ScanId: "test1", IsComplete: false}},
+				Results: map[string]VulnerabilityResult{"test1": {ScanID: "test1", IsComplete: false}},
 			},
 			args:  args{"test1"},
-			want:  VulnerabilityResult{ScanId: "test1", IsComplete: false},
+			want:  VulnerabilityResult{ScanID: "test1", IsComplete: false},
 			want1: true,
 			expectedResultStoreAfterPopResult: fields{
-				Results: map[string]VulnerabilityResult{"test1": {ScanId: "test1", IsComplete: false}},
+				Results: map[string]VulnerabilityResult{"test1": {ScanID: "test1", IsComplete: false}},
 			},
 		},
 	}
@@ -105,7 +105,7 @@ func TestMemoryResultStore_PopResult(t *testing.T) {
 			m := MemoryResultStore{
 				Results: tt.fields.Results,
 			}
-			got, got1 := m.PopResult(tt.args.scanId)
+			got, got1 := m.PopResult(tt.args.scanID)
 			assert.Equal(t, tt.want, got)
 			assert.Equal(t, tt.want1, got1)
 			assert.Equal(t, tt.expectedResultStoreAfterPopResult.Results, m.Results)
@@ -118,7 +118,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 		Results map[string]VulnerabilityResult
 	}
 	type args struct {
-		scanId  string
+		scanID  string
 		buildFn func() (*harbor.VulnerabilityReport, error)
 	}
 	resultStore = MemoryResultStore{Results: make(map[string]VulnerabilityResult, 1000)}
@@ -137,7 +137,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 			name: "result found and scan complete",
 			fields: fields{Results: map[string]VulnerabilityResult{
 				"test1": {
-					ScanId:     "test1",
+					ScanID:     "test1",
 					IsComplete: true,
 					Result: &harbor.VulnerabilityReport{
 						GeneratedAt: testTime,
@@ -167,13 +167,13 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 				},
 			}},
 			args: args{
-				scanId: "test1",
+				scanID: "test1",
 				buildFn: func() (*harbor.VulnerabilityReport, error) {
 					return &harbor.VulnerabilityReport{}, nil
 				},
 			},
 			want: VulnerabilityResult{
-				ScanId:     "test1",
+				ScanID:     "test1",
 				IsComplete: true,
 				Result: &harbor.VulnerabilityReport{
 					GeneratedAt: testTime,
@@ -207,18 +207,18 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 			name: "result found and scan incomplete",
 			fields: fields{Results: map[string]VulnerabilityResult{
 				"test1": {
-					ScanId:     "test1",
+					ScanID:     "test1",
 					IsComplete: false,
 				},
 			}},
 			args: args{
-				scanId: "test1",
+				scanID: "test1",
 				buildFn: func() (*harbor.VulnerabilityReport, error) {
 					return &harbor.VulnerabilityReport{}, nil
 				},
 			},
 			want: VulnerabilityResult{
-				ScanId:     "test1",
+				ScanID:     "test1",
 				IsComplete: false,
 				Result:     nil,
 			},
@@ -228,20 +228,20 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 			name:   "error in build function",
 			fields: fields{Results: map[string]VulnerabilityResult{}},
 			args: args{
-				scanId: "test1",
+				scanID: "test1",
 				buildFn: func() (*harbor.VulnerabilityReport, error) {
 					return &harbor.VulnerabilityReport{}, fmt.Errorf("test error")
 				},
 			},
 			want: VulnerabilityResult{
-				ScanId:     "test1",
+				ScanID:     "test1",
 				IsComplete: false,
 				Result:     nil,
 			},
 			wantResponseOnChannel: true,
 			wantErr:               true,
 			wantChannelResult: VulnerabilityResult{
-				ScanId:     "test1",
+				ScanID:     "test1",
 				IsComplete: true,
 				Result:     nil,
 				Error:      fmt.Errorf("test error"),
@@ -251,7 +251,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 			name:   "result not found",
 			fields: fields{Results: map[string]VulnerabilityResult{}},
 			args: args{
-				scanId: "test1",
+				scanID: "test1",
 				buildFn: func() (*harbor.VulnerabilityReport, error) {
 					return &harbor.VulnerabilityReport{
 						GeneratedAt: testTime,
@@ -281,7 +281,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 				},
 			},
 			want: VulnerabilityResult{
-				ScanId:     "test1",
+				ScanID:     "test1",
 				IsComplete: false,
 				Result:     nil,
 				Error:      fmt.Errorf("result not ready"),
@@ -289,7 +289,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 			wantResponseOnChannel: true,
 			wantErr:               true,
 			wantChannelResult: VulnerabilityResult{
-				ScanId:     "test1",
+				ScanID:     "test1",
 				IsComplete: true,
 				Result: &harbor.VulnerabilityReport{
 					GeneratedAt: testTime,
@@ -324,7 +324,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 			m := MemoryResultStore{
 				Results: tt.fields.Results,
 			}
-			got := m.RequestResult(tt.args.scanId, tt.args.buildFn)
+			got := m.RequestResult(tt.args.scanID, tt.args.buildFn)
 			if tt.wantErr {
 				assert.Error(t, got.Error)
 			} else {

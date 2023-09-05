@@ -59,7 +59,7 @@ func isAuthenticated(apiKey string, r *http.Request) bool {
 // Middleware function, which will be called for each request
 func (h *APIHandler) AuthenticationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if isAuthenticated(h.config.ApiKey, r) {
+		if isAuthenticated(h.config.APIKey, r) {
 			next.ServeHTTP(w, r)
 		} else {
 			// Write an error and stop the handler chain

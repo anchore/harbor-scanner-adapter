@@ -22,7 +22,7 @@ const (
 
 var okConfig = anchore.AdapterConfig{
 	ListenAddr:                    ":8080",
-	ApiKey:                        "apikey123",
+	APIKey:                        "apikey123",
 	LogFormat:                     "",
 	LogLevel:                      logrus.InfoLevel,
 	FullVulnerabilityDescriptions: false,
@@ -44,7 +44,7 @@ func (m *MockAdapter) GetMetadata() (harbor.ScannerAdapterMetadata, error) {
 }
 
 func (m *MockAdapter) Scan(req harbor.ScanRequest) (harbor.ScanResponse, error) {
-	id, err := anchore.GenerateScanId(req.Artifact.Repository, req.Artifact.Digest)
+	id, err := anchore.GenerateScanID(req.Artifact.Repository, req.Artifact.Digest)
 	if err != nil {
 		return harbor.ScanResponse{}, err
 	}

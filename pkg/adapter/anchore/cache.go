@@ -18,8 +18,8 @@ type CacheConfiguration struct {
 	VulnDescriptionCacheEnabled  bool
 	VulnDescriptionCacheMaxCount int
 	VulnDescriptionCacheTTL      int
-	DbUpdateCacheEnabled         bool
-	DbUpdatedCacheTTL            int
+	DBUpdateCacheEnabled         bool
+	DBUpdatedCacheTTL            int
 	VulnReportCacheEnabled       bool
 	VulnReportCacheMaxCount      int
 	VulnReportCacheTTL           int
@@ -38,14 +38,14 @@ type LockingTTLCache struct {
 	Enabled bool          // If true, use the cache, else always bypass
 }
 
-// Cache for vulnerability description text since those must be retrieved from the Anchore APIs separately
+// DescriptionCache for vulnerability description text since those must be retrieved from the Anchore APIs separately
 // This can be removed if/when the Anchore API vulnerability response includes descriptions directly
 var DescriptionCache *LockingTTLCache
 
-// Cache for the vulnerability response from the Anchore API
+// ReportCache for the vulnerability response from the Anchore API
 var ReportCache *LockingTTLCache
 
-// Cache for storing vuln db update timestamps to minimize the calls to get the db timestamp since it isn't part of
+// UpdateTimestampCache for storing vuln db update timestamps to minimize the calls to get the db timestamp since it isn't part of
 // the vulnerability response
 var UpdateTimestampCache *LockingTTLCache
 
@@ -113,6 +113,6 @@ func InitCaches(configuration CacheConfiguration) error {
 		configuration.VulnReportCacheMaxCount,
 		configuration.VulnReportCacheTTL,
 	)
-	UpdateTimestampCache = NewCache(configuration.DbUpdateCacheEnabled, 1, configuration.DbUpdatedCacheTTL)
+	UpdateTimestampCache = NewCache(configuration.DBUpdateCacheEnabled, 1, configuration.DBUpdatedCacheTTL)
 	return nil
 }

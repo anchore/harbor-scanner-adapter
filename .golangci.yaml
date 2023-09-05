@@ -14,8 +14,8 @@ linters:
     - errcheck
     - errorlint
     - exportloopref
-    - funlen
-    - gocognit
+    # - funlen
+    # - gocognit
     - goconst
     - gocritic
     - gocyclo

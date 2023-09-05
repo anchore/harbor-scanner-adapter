@@ -36,9 +36,9 @@ func TestFileConfigLoad(t *testing.T) {
 func TestEnvConfig(t *testing.T) {
 	var err error
 
-	err = os.Setenv(EndpointEnvVarName, "https://somehost:8228")
-	err = os.Setenv(UsernameEnvVarName, "harboruser")
-	err = os.Setenv(PasswordEnvVarName, "harboruserpassword")
+	_ = os.Setenv(EndpointEnvVarName, "https://somehost:8228")
+	_ = os.Setenv(UsernameEnvVarName, "harboruser")
+	_ = os.Setenv(PasswordEnvVarName, "harboruserpassword")
 
 	conf, err := GetConfig()
 	if err != nil {
@@ -49,9 +49,4 @@ func TestEnvConfig(t *testing.T) {
 		log.Printf("Config is nil")
 		t.Fail()
 	}
-}
-
-// Test both in place, ensure file has precedence
-func TestFileOverride(t *testing.T) {
-
 }

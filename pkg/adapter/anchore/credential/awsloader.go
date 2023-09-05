@@ -32,8 +32,13 @@ func getAWSSecret(configValue string) string {
 
 	log.WithFields(log.Fields{"region": region, "name": name, "key": key}).Debug("pass in secret manager parameters")
 
-	//Create a Secrets Manager client
-	svc := secretsmanager.New(session.New(), &aws.Config{Region: aws.String(region)})
+	// Create a Secrets Manager client
+	awsSession, err := session.NewSession()
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("failed to create aws session")
+		return ""
+	}
+	svc := secretsmanager.New(awsSession, &aws.Config{Region: aws.String(region)})
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId:     aws.String(name),
 		VersionStage: aws.String("AWSCURRENT"), // VersionStage defaults to AWSCURRENT if unspecified
@@ -41,7 +46,7 @@ func getAWSSecret(configValue string) string {
 
 	result, err := svc.GetSecretValue(input)
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
+		if aerr, ok := err.(awserr.Error); ok { //nolint:errorlint
 			switch aerr.Code() {
 			case secretsmanager.ErrCodeDecryptionFailure:
 				// Secrets Manager can't decrypt the protected secret text using the provided KMS key.
@@ -75,7 +80,11 @@ func getAWSSecret(configValue string) string {
 			secretString = *result.SecretString
 			// a map container to decode the JSON structure into
 			kmap := make(map[string]string)
-			json.Unmarshal([]byte(secretString), &kmap)
+			err := json.Unmarshal([]byte(secretString), &kmap)
+			if err != nil {
+				log.WithFields(log.Fields{"err": err}).Error("failed to unmarshal secret string")
+				return ""
+			}
 			return kmap[key]
 		}
 	}

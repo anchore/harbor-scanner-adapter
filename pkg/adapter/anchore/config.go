@@ -14,17 +14,17 @@ import (
 
 type AdapterConfig struct {
 	ListenAddr                    string // Address to listen on, e.g ":8080" or "127.0.0.1:80"
-	ApiKey                        string // Key for auth, used as a Bearer token
+	APIKey                        string // Key for auth, used as a Bearer token
 	LogFormat                     string
 	LogLevel                      log.Level
 	FullVulnerabilityDescriptions bool   // If true, the scanner adapter will query anchore to get vuln descriptions, else will use cvss string and defer to the link url
 	TLSKeyFile                    string // Path to key file
 	TLSCertFile                   string // Path to cert file
 	FilterVendorIgnoredVulns      bool
-	TLSVerify                     bool                // Enable TLS verification on api calls to the adapter
-	RegistryTLSVerify             bool                // Enable TLS verification on Anchore's calls to the registry on the data path
-	RegistryValidateCreds         bool                // Validate registry credentials when adding them to Anchore via the Anchore API
-	AnchoreClientConfig           client.ClientConfig // Credentials and client configuration
+	TLSVerify                     bool          // Enable TLS verification on api calls to the adapter
+	RegistryTLSVerify             bool          // Enable TLS verification on Anchore's calls to the registry on the data path
+	RegistryValidateCreds         bool          // Validate registry credentials when adding them to Anchore via the Anchore API
+	AnchoreClientConfig           client.Config // Credentials and client configuration
 	CacheConfig                   CacheConfiguration
 	UseAnchoreConfiguredCreds     bool // If true, the adapter will ignore the dynamic credentials that are provided by harbor for each scan and will instead expect that the admin has configured Anchore with credentials out-of-band. Default is False.
 }
@@ -36,10 +36,10 @@ const (
 	ListenAddrEnvVar                  = "SCANNER_ADAPTER_LISTEN_ADDR"
 	LogLevelEnvVar                    = "SCANNER_ADAPTER_LOG_LEVEL"
 	LogFormatEnvVar                   = "SCANNER_ADAPTER_LOG_FORMAT"
-	ApiKeyEnvVar                      = "SCANNER_ADAPTER_APIKEY"
+	APIKeyEnvVar                      = "SCANNER_ADAPTER_APIKEY"
 	FullVulnDescriptionsEnvVar        = "SCANNER_ADAPTER_FULL_VULN_DESCRIPTIONS"
-	TlsKeyEnvVar                      = "SCANNER_ADAPTER_TLS_KEY_FILE"
-	TlsCertEnvVar                     = "SCANNER_ADAPTER_TLS_CERT_FILE"
+	TLSKeyEnvVar                      = "SCANNER_ADAPTER_TLS_KEY_FILE"
+	TLSCertEnvVar                     = "SCANNER_ADAPTER_TLS_CERT_FILE"
 	FilterVendorIgnoredVulns          = "SCANNER_ADAPTER_FILTER_VENDOR_IGNORED"
 	TLSVerifyEnvVarName               = "SCANNER_ADAPTER_TLS_VERIFY"
 	RegistryValidateCredsEnvVarName   = "SCANNER_ADAPTER_REGISTRY_VALIDATE_CREDS"
@@ -51,31 +51,31 @@ const (
 	TimeoutEnvVarName                 = "ANCHORE_CLIENT_TIMEOUT_SECONDS"
 	DescriptionCacheEnabledEnvVarName = "SCANNER_ADAPTER_DESCRIPTION_CACHE_ENABLED"
 	DescriptionCacheItemCount         = "SCANNER_ADAPTER_DESCRIPTION_CACHE_COUNT"
-	DescriptionCacheTtl               = "SCANNER_ADAPTER_DESCRIPTION_CACHE_TTL"
+	DescriptionCacheTTL               = "SCANNER_ADAPTER_DESCRIPTION_CACHE_TTL"
 	DefaultDescriptionCacheEnabled    = true
 	DefaultDescriptionCacheTTL        = 60 * 60 * 24
 	DefaultDescriptionCacheItemCount  = 10000
 	ReportCacheEnabledEnvVarName      = "SCANNER_ADAPTER_REPORT_CACHE_ENABLED"
 	ReportCacheItemCount              = "SCANNER_ADAPTER_REPORT_CACHE_COUNT"
-	ReportCacheTtl                    = "SCANNER_ADAPTER_REPORT_CACHE_TTL"
+	ReportCacheTTL                    = "SCANNER_ADAPTER_REPORT_CACHE_TTL"
 	DefaultReportCacheEnabled         = true
 	DefaultReportCacheTTL             = 180
 	DefaultReportCacheItemCount       = 100
-	DbUpdateCacheEnabledEnvVarName    = "SCANNER_ADAPTER_DB_UPDATE_CACHE_ENABLED"
-	DbUpdateCacheTtl                  = "SCANNER_ADAPTER_DB_UPDATE_CACHE_TTL"
-	DefaultDbUpdateCacheEnabled       = true
-	DefaultDbUpdateCacheTTL           = 60
+	DBUpdateCacheEnabledEnvVarName    = "SCANNER_ADAPTER_DB_UPDATE_CACHE_ENABLED"
+	DBUpdateCacheTTL                  = "SCANNER_ADAPTER_DB_UPDATE_CACHE_TTL"
+	DefaultDBUpdateCacheEnabled       = true
+	DefaultDBUpdateCacheTTL           = 60
 	UseAnchoreConfigCredsEnvVarName   = "SCANNER_ADAPTER_IGNORE_HARBOR_CREDS"
 	UseAnchoreConfigCredsDefault      = false
-)
+) // #nosec G101
 
-// Initialized to defaults
+// DefaultCacheConfig Initialized to defaults
 var DefaultCacheConfig = CacheConfiguration{
 	VulnDescriptionCacheEnabled:  DefaultDescriptionCacheEnabled,
 	VulnDescriptionCacheMaxCount: DefaultDescriptionCacheItemCount,
 	VulnDescriptionCacheTTL:      DefaultDescriptionCacheTTL,
-	DbUpdateCacheEnabled:         DefaultDbUpdateCacheEnabled,
-	DbUpdatedCacheTTL:            DefaultDbUpdateCacheTTL,
+	DBUpdateCacheEnabled:         DefaultDBUpdateCacheEnabled,
+	DBUpdatedCacheTTL:            DefaultDBUpdateCacheTTL,
 	VulnReportCacheEnabled:       DefaultReportCacheEnabled,
 	VulnReportCacheMaxCount:      DefaultReportCacheItemCount,
 	VulnReportCacheTTL:           DefaultReportCacheTTL,
@@ -90,12 +90,14 @@ func GetEnvBoolean(varName string, defaultValue bool) (bool, error) {
 	if value, ok := os.LookupEnv(varName); ok {
 		value = strings.ToLower(value) // Normalize
 
-		if value == "true" || value == "y" || value == "yes" {
+		switch {
+		case value == "true" || value == "y" || value == "yes":
 			return true, nil
-		} else if value == "false" || value == "n" || value == "no" {
+		case value == "false" || value == "n" || value == "no":
 			return false, nil
-		} else {
-			log.WithFields(log.Fields{"value": value, "key": varName, "type": "bool"}).Error("invalid format for environment variable value")
+		default:
+			log.WithFields(log.Fields{"value": value, "key": varName, "type": "bool"}).
+				Error("invalid format for environment variable value")
 			return false, fmt.Errorf("value %v cannot be parsed as a bool", value)
 		}
 	}
@@ -104,6 +106,8 @@ func GetEnvBoolean(varName string, defaultValue bool) (bool, error) {
 }
 
 // Load the service configuration, from environment variables since there are no secrets here. If not set, uses default listen addr :8080
+//
+//gocyclo:ignore
 func GetConfig() (AdapterConfig, error) {
 	cfg := AdapterConfig{}
 	var ok bool
@@ -114,14 +118,9 @@ func GetConfig() (AdapterConfig, error) {
 		// Verify the format as valid
 		comps := strings.Split(cfg.ListenAddr, ":")
 		if len(comps) == 2 {
-			if len(comps[0]) == 0 {
-				// Ok, like ":8080"
-			} else {
-				if net.ParseIP(comps[0]) == nil {
-					return cfg, fmt.Errorf("invalid IP component of listen address %s", cfg.ListenAddr)
-				}
+			if len(comps[0]) != 0 && net.ParseIP(comps[0]) == nil {
+				return cfg, fmt.Errorf("invalid IP component of listen address %s", cfg.ListenAddr)
 			}
-
 			if _, err := strconv.Atoi(comps[1]); err != nil {
 				return cfg, fmt.Errorf("invalid port format in listen address %s", cfg.ListenAddr)
 			}
@@ -132,7 +131,7 @@ func GetConfig() (AdapterConfig, error) {
 		cfg.ListenAddr = DefaultListenAddr
 	}
 
-	if cfg.ApiKey, ok = os.LookupEnv(ApiKeyEnvVar); ok {
+	if cfg.APIKey, ok = os.LookupEnv(APIKeyEnvVar); ok {
 		log.Info("Detected api key in configuration")
 	} else {
 		log.Info("No api key detected in configuration")
@@ -155,21 +154,21 @@ func GetConfig() (AdapterConfig, error) {
 	var useVulnDescription string
 	if useVulnDescription, ok = os.LookupEnv(FullVulnDescriptionsEnvVar); ok {
 		log.Info("Full vuln description value detected in configuration")
-		cfg.FullVulnerabilityDescriptions = "false" != strings.ToLower(useVulnDescription)
+		cfg.FullVulnerabilityDescriptions = strings.ToLower(useVulnDescription) != "false"
 	} else {
 		log.Info("No full vulnerability description value found in env, defaulting to 'true'")
 		cfg.FullVulnerabilityDescriptions = true
 	}
 
-	if cfg.TLSCertFile, ok = os.LookupEnv(TlsCertEnvVar); !ok {
+	if cfg.TLSCertFile, ok = os.LookupEnv(TLSCertEnvVar); !ok {
 		cfg.TLSCertFile = ""
 	}
 
-	if cfg.TLSKeyFile, ok = os.LookupEnv(TlsKeyEnvVar); !ok {
+	if cfg.TLSKeyFile, ok = os.LookupEnv(TLSKeyEnvVar); !ok {
 		cfg.TLSKeyFile = ""
 	}
 
-	cfg.AnchoreClientConfig = client.ClientConfig{}
+	cfg.AnchoreClientConfig = client.Config{}
 
 	if path, ok := os.LookupEnv(AuthConfigFile); ok {
 		log.Printf("Using config file at %v", path)
@@ -243,7 +242,7 @@ func GetConfig() (AdapterConfig, error) {
 
 	cfg.CacheConfig = DefaultCacheConfig
 
-	cfg.CacheConfig.VulnDescriptionCacheEnabled, err = GetEnvBoolean(
+	cfg.CacheConfig.VulnDescriptionCacheEnabled, _ = GetEnvBoolean(
 		DescriptionCacheEnabledEnvVarName,
 		DefaultDescriptionCacheEnabled,
 	)
@@ -257,16 +256,16 @@ func GetConfig() (AdapterConfig, error) {
 		}
 	}
 
-	if ttl, ok := os.LookupEnv(DescriptionCacheTtl); ok {
+	if ttl, ok := os.LookupEnv(DescriptionCacheTTL); ok {
 		cfg.CacheConfig.VulnDescriptionCacheMaxCount, err = strconv.Atoi(ttl)
 		if err != nil {
-			log.WithFields(log.Fields{"value": ttl, "key": DescriptionCacheTtl, "type": "int"}).
+			log.WithFields(log.Fields{"value": ttl, "key": DescriptionCacheTTL, "type": "int"}).
 				Error("invalid format for environment variable value")
 			return cfg, err
 		}
 	}
 
-	cfg.CacheConfig.VulnReportCacheEnabled, err = GetEnvBoolean(ReportCacheEnabledEnvVarName, DefaultReportCacheEnabled)
+	cfg.CacheConfig.VulnReportCacheEnabled, _ = GetEnvBoolean(ReportCacheEnabledEnvVarName, DefaultReportCacheEnabled)
 
 	if count, ok := os.LookupEnv(ReportCacheItemCount); ok {
 		cfg.CacheConfig.VulnReportCacheMaxCount, err = strconv.Atoi(count)
@@ -277,27 +276,27 @@ func GetConfig() (AdapterConfig, error) {
 		}
 	}
 
-	if ttl, ok := os.LookupEnv(ReportCacheTtl); ok {
+	if ttl, ok := os.LookupEnv(ReportCacheTTL); ok {
 		cfg.CacheConfig.VulnReportCacheMaxCount, err = strconv.Atoi(ttl)
 		if err != nil {
-			log.WithFields(log.Fields{"value": ttl, "key": ReportCacheTtl, "type": "int"}).
+			log.WithFields(log.Fields{"value": ttl, "key": ReportCacheTTL, "type": "int"}).
 				Error("invalid format for environment variable value")
 			return cfg, err
 		}
 	}
 
-	cfg.CacheConfig.DbUpdateCacheEnabled, err = GetEnvBoolean(DbUpdateCacheEnabledEnvVarName, DefaultDbUpdateCacheEnabled)
+	cfg.CacheConfig.DBUpdateCacheEnabled, _ = GetEnvBoolean(DBUpdateCacheEnabledEnvVarName, DefaultDBUpdateCacheEnabled)
 
-	if ttl, ok := os.LookupEnv(DbUpdateCacheTtl); ok {
-		cfg.CacheConfig.DbUpdatedCacheTTL, err = strconv.Atoi(ttl)
+	if ttl, ok := os.LookupEnv(DBUpdateCacheTTL); ok {
+		cfg.CacheConfig.DBUpdatedCacheTTL, err = strconv.Atoi(ttl)
 		if err != nil {
-			log.WithFields(log.Fields{"value": ttl, "key": DbUpdateCacheTtl, "type": "int"}).
+			log.WithFields(log.Fields{"value": ttl, "key": DBUpdateCacheTTL, "type": "int"}).
 				Error("invalid format for environment variable value")
 			return cfg, err
 		}
 	}
 
-	cfg.UseAnchoreConfiguredCreds, err = GetEnvBoolean(UseAnchoreConfigCredsEnvVarName, UseAnchoreConfigCredsDefault)
+	cfg.UseAnchoreConfiguredCreds, _ = GetEnvBoolean(UseAnchoreConfigCredsEnvVarName, UseAnchoreConfigCredsDefault)
 
 	return cfg, nil
 }
