@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anchore/harbor-scanner-adapter/pkg/model/harbor"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/anchore/harbor-scanner-adapter/pkg/model/harbor"
 )
 
 func TestMemoryResultStore_HasResult(t *testing.T) {

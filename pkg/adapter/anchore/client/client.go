@@ -12,10 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/credential"
-	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
 	"github.com/parnurzeal/gorequest"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/credential"
+	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
 )
 
 const (

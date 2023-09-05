@@ -8,8 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/client"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore/client"
 )
 
 type AdapterConfig struct {

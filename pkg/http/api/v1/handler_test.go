@@ -7,10 +7,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter"
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore"
 	"github.com/anchore/harbor-scanner-adapter/pkg/model/harbor"
-	"github.com/sirupsen/logrus"
 )
 
 const (

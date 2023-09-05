@@ -4,10 +4,11 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore"
-	api "github.com/anchore/harbor-scanner-adapter/pkg/http/api/v1"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore"
+	api "github.com/anchore/harbor-scanner-adapter/pkg/http/api/v1"
 )
 
 func main() {

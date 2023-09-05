@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter"
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore"
 	"github.com/anchore/harbor-scanner-adapter/pkg/model/harbor"
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 )
 
 const (

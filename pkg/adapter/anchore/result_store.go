@@ -3,8 +3,9 @@ package anchore
 import (
 	"fmt"
 
-	"github.com/anchore/harbor-scanner-adapter/pkg/model/harbor"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/anchore/harbor-scanner-adapter/pkg/model/harbor"
 )
 
 // The result storage system supports an async loading of the merged results of a vuln response and descriptions
