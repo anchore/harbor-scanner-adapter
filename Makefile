@@ -34,12 +34,20 @@ all: test build
 $(TEMPDIR):
 	mkdir -p $(TEMPDIR)
 
+.PHONY: bootstrap-go
+bootstrap-go:
+	$(call title,Boostrapping dependencies)
+	go mod download
+
 .PHONY: bootstrap-tools
 bootstrap-tools: $(TEMPDIR) $(RESULTSDIR)
 	$(call title,Boostrapping tools)
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TEMPDIR)/ $(GOLANG_CI_VERSION)
 	GOBIN="$(realpath $(TEMPDIR))" go install github.com/rinchsan/gosimports/cmd/gosimports@$(GOSIMPORTS_VERSION)
 	GOBIN="$(realpath $(TEMPDIR))" go install github.com/goreleaser/goreleaser@$(GORELEASER_VERSION)
+
+.PHONY: bootstrap
+bootstrap: bootstrap-go bootstrap-tools ## Download and install all go dependencies (+ prep tooling in the ./tmp dir)
 
 .PHONY: static-analysis
 static-analysis: lint
