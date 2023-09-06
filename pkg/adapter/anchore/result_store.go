@@ -3,8 +3,9 @@ package anchore
 import (
 	"fmt"
 
-	"github.com/anchore/harbor-scanner-adapter/pkg/model/harbor"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/anchore/harbor-scanner-adapter/pkg/model/harbor"
 )
 
 // The result storage system supports an async loading of the merged results of a vuln response and descriptions
@@ -12,19 +13,19 @@ import (
 
 type ResultStore interface {
 	HasResult(
-		scanId string,
+		scanID string,
 	) bool // Check if a result is available
 	RequestResult(
-		scanId string,
+		scanID string,
 		buildFn func() (*harbor.VulnerabilityReport, error),
 	) VulnerabilityResult // Request a result to be created
 	PopResult(
-		scanId string,
+		scanID string,
 	) (VulnerabilityResult, bool) // Returns a result and true if found, false if not (e.g. like hash map interface)
 }
 
 type VulnerabilityResult struct {
-	ScanId     string
+	ScanID     string
 	IsComplete bool
 	Result     *harbor.VulnerabilityReport
 	Error      error
@@ -45,53 +46,54 @@ func NewResultStore() ResultStore {
 	return newStore
 }
 
-func (m MemoryResultStore) HasResult(scanId string) bool {
-	found, ok := m.Results[scanId]
+func (m MemoryResultStore) HasResult(scanID string) bool {
+	found, ok := m.Results[scanID]
 	log.Debugf("HasResult: %v", found)
 	return ok && found.IsComplete
 }
 
-func (m MemoryResultStore) PopResult(scanId string) (VulnerabilityResult, bool) {
-	found, ok := m.Results[scanId]
+func (m MemoryResultStore) PopResult(scanID string) (VulnerabilityResult, bool) {
+	found, ok := m.Results[scanID]
 	if found.IsComplete {
-		log.WithField("scanId", scanId).Debug("found completed result and removing from store to return to caller")
-		delete(m.Results, scanId)
+		log.WithField("scanId", scanID).Debug("found completed result and removing from store to return to caller")
+		delete(m.Results, scanID)
 	} else {
-		log.WithField("scanId", scanId).Debug("found result in store, but not complete, so not removing from store")
+		log.WithField("scanId", scanID).Debug("found result in store, but not complete, so not removing from store")
 	}
 
 	return found, ok
 }
 
 func (m MemoryResultStore) RequestResult(
-	scanId string,
+	scanID string,
 	buildFn func() (*harbor.VulnerabilityReport, error),
 ) VulnerabilityResult {
-	existing, ok := m.PopResult(scanId)
+	existing, ok := m.PopResult(scanID)
 
 	if !ok {
 		// Result not found so begin the async fetch
 		go func() {
 			result, err := buildFn()
 			if err != nil {
-				log.Debugf("error building result for %v: %v", scanId, err)
-				resultChannel <- VulnerabilityResult{scanId, true, nil, err}
+				log.Debugf("error building result for %v: %v", scanID, err)
+				resultChannel <- VulnerabilityResult{scanID, true, nil, err}
 			} else {
-				log.Debugf("result built for %v", scanId)
-				resultChannel <- VulnerabilityResult{scanId, true, result, nil}
+				log.Debugf("result built for %v", scanID)
+				resultChannel <- VulnerabilityResult{scanID, true, result, nil}
 			}
 		}()
-		existing = VulnerabilityResult{ScanId: scanId, IsComplete: false, Result: nil, Error: fmt.Errorf("result not ready")}
-		m.Results[scanId] = existing
+		existing = VulnerabilityResult{ScanID: scanID, IsComplete: false, Result: nil, Error: fmt.Errorf("result not ready")}
+		m.Results[scanID] = existing
 	}
 	return existing
 }
 
 func (m MemoryResultStore) resultRetriever() {
-	for true {
+	for {
 		report := <-resultChannel
-		log.WithFields(log.Fields{"scanId": report.ScanId, "isComplete": report.IsComplete, "reportError": report.Error}).Debug("scan result added to result store")
-		m.Results[report.ScanId] = report
+		log.WithFields(log.Fields{"scanId": report.ScanID, "isComplete": report.IsComplete, "reportError": report.Error}).
+			Debug("scan result added to result store")
+		m.Results[report.ScanID] = report
 	}
 }
 

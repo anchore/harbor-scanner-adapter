@@ -83,15 +83,14 @@ func TestScanIdToRegistryDigest(t *testing.T) {
 	}
 
 	for _, v := range inputs {
-		generated, err := GenerateScanId(v[1], v[2])
+		generated, err := GenerateScanID(v[1], v[2])
 		if err != nil {
 			t.Errorf("failed: %v", err)
 		}
 
-		if repo, dig, err := ScanIdToRegistryDigest(generated); (err == nil) != (v[3] == "true") {
+		if repo, dig, err := ScanIDToRegistryDigest(generated); (err == nil) != (v[3] == "true") {
 			t.Errorf("Failed test. Repo=%v, Digest=%v err=%v", repo, dig, err)
 		}
-
 	}
 }
 
@@ -145,7 +144,7 @@ func TestToHarborDescription(t *testing.T) {
 		VulnerabilityID: "CVE-123",
 		VendorData: []anchore.VendorData{
 			{
-				Id: "CVE-123",
+				ID: "CVE-123",
 				CVSSv2Score: anchore.CVSSScore{
 					BaseScore:           1.0,
 					ExploitabilityScore: 1.0,
@@ -160,7 +159,7 @@ func TestToHarborDescription(t *testing.T) {
 		},
 		NvdData: []anchore.NvdObject{
 			{
-				Id: "CVE-123",
+				ID: "CVE-123",
 				CVSSv2Score: anchore.CVSSScore{
 					BaseScore:           1.0,
 					ExploitabilityScore: 1.0,

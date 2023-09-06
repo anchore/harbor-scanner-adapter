@@ -7,22 +7,23 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter"
 	"github.com/anchore/harbor-scanner-adapter/pkg/adapter/anchore"
 	"github.com/anchore/harbor-scanner-adapter/pkg/model/harbor"
-	"github.com/sirupsen/logrus"
 )
 
 const (
 	TestRegistry = "http://harbor.domain:8443"
 	TestRepo1    = "library/image1/image"
-	TestDigest1  = "sha256:4214707ec3ec157f9566258710e274824a0b6a8e34051bd081d9192900d06647"
+	TestDigest1  = "sha256:4214707ec3ec157f9566258710e274824a0b6a8e34051bd081d9192900d06647" // #nosec G101
 	TestTag1     = "latest"
 )
 
 var okConfig = anchore.AdapterConfig{
 	ListenAddr:                    ":8080",
-	ApiKey:                        "apikey123",
+	APIKey:                        "apikey123",
 	LogFormat:                     "",
 	LogLevel:                      logrus.InfoLevel,
 	FullVulnerabilityDescriptions: false,
@@ -44,21 +45,18 @@ func (m *MockAdapter) GetMetadata() (harbor.ScannerAdapterMetadata, error) {
 }
 
 func (m *MockAdapter) Scan(req harbor.ScanRequest) (harbor.ScanResponse, error) {
-	id, err := anchore.GenerateScanId(req.Artifact.Repository, req.Artifact.Digest)
+	id, err := anchore.GenerateScanID(req.Artifact.Repository, req.Artifact.Digest)
 	if err != nil {
 		return harbor.ScanResponse{}, err
 	}
-	return harbor.ScanResponse{id}, nil
+	return harbor.ScanResponse{ID: id}, nil
 }
 
-func (m *MockAdapter) GetHarborVulnerabilityReport(
-	scanId string,
-	includeDescriptions bool,
-) (*harbor.VulnerabilityReport, error) {
+func (m *MockAdapter) GetHarborVulnerabilityReport(_ string, _ bool) (*harbor.VulnerabilityReport, error) {
 	return &harbor.VulnerabilityReport{}, nil
 }
 
-func (m *MockAdapter) GetRawVulnerabilityReport(scanId string) (harbor.RawReport, error) {
+func (m *MockAdapter) GetRawVulnerabilityReport(_ string) (harbor.RawReport, error) {
 	return `{"image": "sha256:test123"}`, nil
 }
 

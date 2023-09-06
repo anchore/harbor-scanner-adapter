@@ -1,9 +1,9 @@
 package anchore
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"math/rand"
 	"testing"
 	"time"
 
@@ -47,10 +47,8 @@ func TestGetCachedDbUpdateTime(t *testing.T) {
 
 	if t2, ok := UpdateTimestampCache.Get("db"); !ok {
 		t.Fatal("not cached")
-	} else {
-		if t2 != testT {
-			t.Fatal("wrong ts cached")
-		}
+	} else if t2 != testT {
+		t.Fatal("wrong ts cached")
 	}
 }
 
@@ -127,13 +125,12 @@ func TestCacheVulnDescription(t *testing.T) {
 	if ok {
 		t.Fatal("should not get value after flush")
 	}
-
 }
 
 func TestCacheVulnDescriptionTimeout(t *testing.T) {
 	t.SkipNow()
 	err := InitCaches(DefaultCacheConfig)
-	testTTL := time.Duration(3 * time.Second)
+	testTTL := 3 * time.Second
 	DescriptionCache.TTL = testTTL
 	if err != nil {
 		t.Fatal(err)
@@ -157,7 +154,6 @@ func TestCacheVulnDescriptionTimeout(t *testing.T) {
 	if DescriptionCache.Cache.Len() > 0 {
 		t.Fatal("should not have any cached entries after ttl + request")
 	}
-
 }
 
 // Test for manual checks of memory usage for various sizes of data
@@ -167,7 +163,7 @@ func TestVulnDescriptionCacheSize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var tmp = make([]byte, 1000)
+	tmp := make([]byte, 1000)
 
 	for i := 0; i < 10000; i++ {
 		_, err := rand.Read(tmp)
@@ -183,7 +179,6 @@ func TestVulnDescriptionCacheSize(t *testing.T) {
 			Description: desc,
 		})
 	}
-
 }
 
 // Vuln report cache tests

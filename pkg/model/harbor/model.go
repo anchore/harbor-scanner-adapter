@@ -5,9 +5,10 @@ package harbor
 import (
 	"bytes"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (

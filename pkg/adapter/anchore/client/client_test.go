@@ -1,9 +1,10 @@
 package client
 
 import (
-	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
 	"sort"
 	"testing"
+
+	"github.com/anchore/harbor-scanner-adapter/pkg/model/anchore"
 )
 
 const (
@@ -104,24 +105,24 @@ const (
 			"httpcode": 400,
 			"message": "cannot fetch image digest/manifest from registry"
 			}`
-)
+) // #nosec G101
 
 func TestSorting(t *testing.T) {
 	vulns := []anchore.NamespacedVulnerability{
 		{
-			"id1",
-			"namespace1",
-			"",
+			ID:          "id1",
+			Namespace:   "namespace1",
+			Description: "",
 		},
 		{
-			"id2",
-			"namespace2",
-			"",
+			ID:          "id2",
+			Namespace:   "namespace2",
+			Description: "",
 		},
 		{
-			"id3",
-			"namespace1",
-			"",
+			ID:          "id3",
+			Namespace:   "namespace1",
+			Description: "",
 		},
 	}
 
@@ -161,7 +162,7 @@ func TestExtractRegistryFromUrl(t *testing.T) {
 	for _, r := range registries {
 		expected := r[1]
 		input := r[0]
-		got, err := ExtractRegistryFromUrl(input)
+		got, err := ExtractRegistryFromURL(input)
 		if err != nil {
 			if expected != "" {
 				t.Errorf("error on %v: %v", input, err)
@@ -172,14 +173,17 @@ func TestExtractRegistryFromUrl(t *testing.T) {
 			t.Errorf("Expected %v, Got %v", r[1], got)
 		}
 	}
-	return
 }
 
 func TestRegistryNameFromRepo(t *testing.T) {
 	registries := [][]string{
 		// Ok, should work
 		{"http://core.harbor.domain:8080", "library", "core.harbor.domain:8080/library"},
-		{"https://core.harbor.domain:8080", "testproject/repository/image", "core.harbor.domain:8080/testproject/repository/image"},
+		{
+			"https://core.harbor.domain:8080",
+			"testproject/repository/image",
+			"core.harbor.domain:8080/testproject/repository/image",
+		},
 		{"https://core.harbor.domain", "some/repository/with/slashes", "core.harbor.domain/some/repository/with/slashes"},
 		{"https://core.harbor.domain/path/v1/", "repo1", "core.harbor.domain/repo1"},
 		// These fail since no scheme.
@@ -201,5 +205,4 @@ func TestRegistryNameFromRepo(t *testing.T) {
 			t.Errorf("Expected %v, Got %v", r[2], got)
 		}
 	}
-	return
 }
