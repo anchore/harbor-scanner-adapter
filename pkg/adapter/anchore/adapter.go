@@ -332,18 +332,10 @@ func GetImageState(imageDigest string, clientConfig *client.Config) (ImageState,
 	if err != nil {
 		return NotFound, err
 	}
-	if len(img) == 0 {
-		// Unusual case, should be 404, but just in case to ensure correct array access
-		return NotFound, fmt.Errorf("not found")
-	}
-	if len(img) > 1 {
-		log.WithFields(log.Fields{"imageDigest": imageDigest, "imageCount": len(img)}).
-			Warn("image status check returned more than one expected record. using the first")
-	}
 
-	log.WithFields(log.Fields{"imageDigest": imageDigest, "analysis_status": img[0].AnalysisStatus}).
+	log.WithFields(log.Fields{"imageDigest": imageDigest, "analysis_status": img.AnalysisStatus}).
 		Debug("image analysis status")
-	switch img[0].AnalysisStatus {
+	switch img.AnalysisStatus {
 	case "analyzed":
 		return Analyzed, nil
 	case "analysis_failed":
@@ -353,7 +345,7 @@ func GetImageState(imageDigest string, clientConfig *client.Config) (ImageState,
 	case "not_analyzed":
 		return Analyzing, nil
 	default:
-		state := img[0].AnalysisStatus
+		state := img.AnalysisStatus
 		log.Debugf("unknown analysis state %s", state)
 		return NotFound, fmt.Errorf("unknown analysis state %s", state)
 	}
