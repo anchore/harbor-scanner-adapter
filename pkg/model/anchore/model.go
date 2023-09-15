@@ -4,8 +4,14 @@ package anchore
 import "time"
 
 // A vulnerability listing from GET /v1/image/<Digest>/vuln/all
-type ImageVulnerabilityReport struct {
+type ImageVulnerabilityReportV1 struct {
 	ImageDigest     string          `json:"imageDigest"`
+	Vulnerabilities []Vulnerability `json:"Vulnerabilities"`
+}
+
+// A vulnerability listing from GET /v2/image/<Digest>/vuln/all
+type ImageVulnerabilityReport struct {
+	ImageDigest     string          `json:"image_digest"`
 	Vulnerabilities []Vulnerability `json:"Vulnerabilities"`
 }
 
@@ -44,14 +50,6 @@ type VendorData struct {
 	CVSSv3Score CVSSScore `json:"cvss_v3"`
 }
 
-// An image status result from GET /v1/images/<Digest>
-type Image struct {
-	Digest         string `json:"imageDigest"`
-	AnalysisStatus string `json:"analysis_status"`
-}
-
-type ImageList []Image
-
 type FeedGroup struct {
 	Name        string `json:"name"`
 	CreatedAt   string `json:"created_at"`
@@ -68,23 +66,6 @@ type FeedStatus struct {
 }
 
 type FeedStatuses []FeedStatus
-
-type DigestSource struct {
-	PullString                string `json:"pullstring"`
-	Tag                       string `json:"tag"`
-	CreationTimestampOverride string `json:"creation_timestamp_override"`
-}
-
-// Models for requesting analysis via the POST /v1/images call
-type ImageSource struct {
-	DigestSource DigestSource `json:"digest"`
-}
-
-type ImageScanRequest struct {
-	Source      ImageSource       `json:"source"`
-	ImageType   string            `json:"image_type"`
-	Annotations map[string]string `json:"annotations,omitempty"`
-}
 
 type Error struct {
 	Detail   map[string]interface{} `json:"detail"`
@@ -123,4 +104,52 @@ type RegistryConfiguration struct {
 	User        string    `json:"registry_user"`
 	CreatedAt   time.Time `json:"created_at"`
 	LastUpdated time.Time `json:"last_updated"`
+}
+
+// An image status result from GET /v1/images/<Digest>
+type ImageV1 struct {
+	Digest         string `json:"imageDigest"`
+	AnalysisStatus string `json:"analysis_status"`
+}
+
+type ImageListV1 []ImageV1
+
+// Models for requesting analysis via the POST /v1/images call
+type DigestSourceV1 struct {
+	PullString                string `json:"pullstring"`
+	Tag                       string `json:"tag"`
+	CreationTimestampOverride string `json:"creation_timestamp_override"`
+}
+
+type ImageSourceV1 struct {
+	DigestSource DigestSourceV1 `json:"digest"`
+}
+
+type ImageScanRequestV1 struct {
+	Source      ImageSourceV1     `json:"source"`
+	ImageType   string            `json:"image_type"`
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+// Models for the response to POST /v2/images
+type DigestSource struct {
+	PullString                string `json:"pull_string"`
+	Tag                       string `json:"tag"`
+	CreationTimestampOverride string `json:"creation_timestamp_override"`
+}
+
+type ImageSource struct {
+	DigestSource DigestSource `json:"digest"`
+}
+
+type ImageScanRequest struct {
+	Source      ImageSource       `json:"source"`
+	ImageType   string            `json:"image_type"`
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+// An image status result from GET /v2/images/<Digest>
+type Image struct {
+	Digest         string `json:"image_digest"`
+	AnalysisStatus string `json:"analysis_status"`
 }

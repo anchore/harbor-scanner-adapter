@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/url"
 	"path"
@@ -23,14 +24,17 @@ const (
 	CHUNKSIZE                               = 100
 	NVDFEEDGROUP                            = "nvdv2:cves"
 	RegistryCredentialUpdateRequestTemplate = `{"registry": "%v", "registry_user": "%v", "registry_pass": "%v", "registry_verify": %v, "registry_type": "docker_v2"}` // #nosec G101
-	AddImageURL                             = "/v1/images"
-	GetImageURLTemplate                     = "/v1/images/%s"
-	GetImageVulnerabilitiesURLTemplate      = "/v1/images/%s/vuln/all"
-	QueryVulnerabilitiesURLTemplate         = "/v1/query/vulnerabilities"
-	RegistriesCollectionURL                 = "/v1/registries"
-	RegistryCredentialUpdateURLTemplate     = "/v1/registries/%s" // #nosec G101
-	FeedsURL                                = "/v1/system/feeds"
+	AddImageURL                             = "/images"
+	GetImageURLTemplate                     = "/images/%s"
+	GetImageVulnerabilitiesURLTemplate      = "/images/%s/vuln/all"
+	QueryVulnerabilitiesURLTemplate         = "/query/vulnerabilities"
+	RegistriesCollectionURL                 = "/registries"
+	RegistryCredentialUpdateURLTemplate     = "/registries/%s" // #nosec G101
+	FeedsURL                                = "/system/feeds"
+	VersionURL                              = "/version"
 )
+
+var apiVersion = "v2" // Defaults to v2 but will switch to v1 if v2 API is not supported
 
 type Config struct {
 	Endpoint       string
@@ -57,19 +61,40 @@ func AnalyzeImage(clientConfiguration *Config, analyzeRequest anchore.ImageScanR
 
 	request := getNewRequest(clientConfiguration)
 
-	reqURL, err := buildURL(*clientConfiguration, AddImageURL, nil)
+	reqURL, err := buildURLWithAPIVersion(*clientConfiguration, AddImageURL, nil)
 	if err != nil {
 		return err
 	}
 
+	var apiCompatibleRequest interface{}
+	if apiVersion == "v1" {
+		apiCompatibleRequest = anchore.ImageScanRequestV1{
+			Source: anchore.ImageSourceV1{
+				DigestSource: anchore.DigestSourceV1{
+					PullString:                analyzeRequest.Source.DigestSource.PullString,
+					Tag:                       analyzeRequest.Source.DigestSource.Tag,
+					CreationTimestampOverride: analyzeRequest.Source.DigestSource.CreationTimestampOverride,
+				},
+			},
+			ImageType:   analyzeRequest.ImageType,
+			Annotations: analyzeRequest.Annotations,
+		}
+	} else {
+		apiCompatibleRequest = analyzeRequest
+	}
+
 	log.WithFields(log.Fields{"method": "post", "url": reqURL}).Debug("sending request to anchore api")
 	// call API get the full report until "analysis_status" = "analyzed"
-	resp, _, errs := sendRequest(request.Post(reqURL).Set("Content-Type", "application/json").Send(analyzeRequest))
+	resp, body, errs := sendRequest(
+		clientConfiguration,
+		request.Post(reqURL).Set("Content-Type", "application/json").Send(apiCompatibleRequest),
+	)
 	if errs != nil {
 		log.Errorf("could not contact anchore api")
 		return errs[0]
 	}
 	if resp.StatusCode != 200 {
+		log.WithFields(log.Fields{"body": string(body), "request": reqURL}).Debug("response from anchore api")
 		return fmt.Errorf("request failed with status %v", resp.StatusCode)
 	}
 	return nil
@@ -207,7 +232,7 @@ func QueryVulnerabilityRecords(
 	morePages := true
 
 	start = time.Now()
-	reqURL, err := buildURL(*clientConfiguration, QueryVulnerabilitiesURLTemplate, nil)
+	reqURL, err := buildURLWithAPIVersion(*clientConfiguration, QueryVulnerabilitiesURLTemplate, nil)
 	if err != nil {
 		return vulnListing, []error{err}
 	}
@@ -220,7 +245,7 @@ func QueryVulnerabilityRecords(
 			req = req.Param("page", page)
 		}
 
-		resp, body, errs := sendRequest(req)
+		resp, body, errs := sendRequest(clientConfiguration, req)
 		if errs != nil {
 			return vulnListing, errs
 		}
@@ -283,18 +308,29 @@ func GetImageVulnerabilities(
 
 	var imageVulnerabilityReport anchore.ImageVulnerabilityReport
 
-	reqURL, err := buildURL(*clientConfiguration, GetImageVulnerabilitiesURLTemplate, []interface{}{digest})
+	reqURL, err := buildURLWithAPIVersion(*clientConfiguration, GetImageVulnerabilitiesURLTemplate, []interface{}{digest})
 	if err != nil {
 		return imageVulnerabilityReport, err
 	}
 
 	request := getNewRequest(clientConfiguration)
-	resp, body, errs := sendRequest(request.Get(reqURL).Param("vendor_only", strconv.FormatBool(filterIgnored)))
+	resp, body, errs := sendRequest(
+		clientConfiguration,
+		request.Get(reqURL).Param("vendor_only", strconv.FormatBool(filterIgnored)),
+	)
 	if errs != nil {
 		return imageVulnerabilityReport, errs[0]
 	}
 
 	if resp.StatusCode == 200 {
+		if apiVersion == "v1" {
+			var imageVulnerabilityReportV1 anchore.ImageVulnerabilityReportV1
+			err := json.Unmarshal(body, &imageVulnerabilityReportV1)
+			if err != nil {
+				return anchore.ImageVulnerabilityReport(imageVulnerabilityReportV1), err
+			}
+			return anchore.ImageVulnerabilityReport(imageVulnerabilityReportV1), nil
+		}
 		err := json.Unmarshal(body, &imageVulnerabilityReport)
 		if err != nil {
 			return imageVulnerabilityReport, err
@@ -304,41 +340,64 @@ func GetImageVulnerabilities(
 	return imageVulnerabilityReport, fmt.Errorf("error response from anchore api")
 }
 
-func GetImage(clientConfiguration *Config, digest string) (anchore.ImageList, error) {
+func GetImage(clientConfiguration *Config, digest string) (anchore.Image, error) {
 	log.WithFields(log.Fields{"digest": digest}).Debug("retrieving anchore state for image")
 
-	var imageList anchore.ImageList
+	var image anchore.Image
 	request := getNewRequest(clientConfiguration)
 
-	reqURL, err := buildURL(*clientConfiguration, GetImageURLTemplate, []interface{}{digest})
+	reqURL, err := buildURLWithAPIVersion(*clientConfiguration, GetImageURLTemplate, []interface{}{digest})
 	if err != nil {
-		return imageList, err
+		return image, err
 	}
 
 	log.WithFields(log.Fields{"method": "get", "url": reqURL}).Debug("sending request to anchore api")
 	// call API get the full report until "analysis_status" = "analyzed"
-	_, body, errs := sendRequest(request.Get(reqURL))
+	_, body, errs := sendRequest(clientConfiguration, request.Get(reqURL))
 	if errs != nil {
 		log.Errorf("could not contact anchore api")
-		return imageList, errs[0]
-	}
-	err = json.Unmarshal(body, &imageList)
-	if err != nil {
-		log.Errorf("unmarshall anchore api response")
-		return imageList, err
+		return image, errs[0]
 	}
 
-	return imageList, nil
+	if apiVersion == "v1" {
+		var imageList anchore.ImageListV1
+		err = json.Unmarshal(body, &imageList)
+		if err != nil {
+			log.Errorf("unmarshall anchore api response")
+			return image, err
+		}
+		if len(imageList) == 0 {
+			// Unusual case, should be 404, but just in case to ensure correct array access
+			return image, fmt.Errorf("not found")
+		}
+		if len(imageList) > 1 {
+			log.WithFields(log.Fields{"imageDigest": digest, "imageCount": len(imageList)}).
+				Warn("image status check returned more than one expected record. using the first")
+		}
+		image = anchore.Image{
+			Digest:         imageList[0].Digest,
+			AnalysisStatus: imageList[0].AnalysisStatus,
+		}
+		return image, nil
+	}
+
+	err = json.Unmarshal(body, &image)
+	if err != nil {
+		log.Errorf("unmarshall anchore api response")
+		return image, err
+	}
+
+	return image, nil
 }
 
 func GetVulnDBUpdateTime(clientConfiguration *Config) (time.Time, error) {
 	request := getNewRequest(clientConfiguration)
-	reqURL, err := buildURL(*clientConfiguration, FeedsURL, nil)
+	reqURL, err := buildURLWithAPIVersion(*clientConfiguration, FeedsURL, nil)
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	_, body, errs := sendRequest(request.Get(reqURL))
+	_, body, errs := sendRequest(clientConfiguration, request.Get(reqURL))
 	if errs != nil {
 		return time.Time{}, errs[0]
 	}
@@ -425,6 +484,17 @@ func buildURL(config Config, requestPathTemplate string, args []interface{}) (st
 	return u.String(), nil
 }
 
+// Build the request URL with API Version
+func buildURLWithAPIVersion(config Config, requestPathTemplate string, args []interface{}) (string, error) {
+	u, err := url.Parse(config.Endpoint)
+	if err != nil {
+		return "", err
+	}
+
+	u.Path = path.Join(u.Path, apiVersion, fmt.Sprintf(requestPathTemplate, args...))
+	return u.String(), nil
+}
+
 // Add a new registry credential to anchore
 func AddRegistryCredential(
 	clientConfiguration *Config,
@@ -441,7 +511,7 @@ func AddRegistryCredential(
 		return nil, nil, []error{err}
 	}
 
-	registryAddURL, err := buildURL(*clientConfiguration, RegistriesCollectionURL, nil)
+	registryAddURL, err := buildURLWithAPIVersion(*clientConfiguration, RegistriesCollectionURL, nil)
 	if err != nil {
 		return nil, nil, []error{err}
 	}
@@ -449,6 +519,7 @@ func AddRegistryCredential(
 	payload := fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password, registryTLSVerify)
 
 	return sendRequest(
+		clientConfiguration,
 		request.Post(registryAddURL).
 			Set("Content-Type", "application/json").
 			Param("validate", strconv.FormatBool(validateCreds)).
@@ -473,18 +544,16 @@ func UpdateRegistryCredential(
 		return nil, nil, []error{err}
 	}
 
-	u, err := url.Parse(clientConfiguration.Endpoint)
+	req, err := buildURLWithAPIVersion(*clientConfiguration, RegistryCredentialUpdateURLTemplate, []interface{}{registryName})
 	if err != nil {
 		return nil, nil, []error{err}
 	}
 
-	// Use query escape instead of path to ensure that ':' is encoded for ports. This not quite spec, but Anchore API expects it to be encoded
-	u.Path = path.Join(u.Path, fmt.Sprintf(RegistryCredentialUpdateURLTemplate, registryName))
-
 	payload := fmt.Sprintf(RegistryCredentialUpdateRequestTemplate, registryName, username, password, registryTLSVerify)
 
 	return sendRequest(
-		request.Put(u.String()).
+		clientConfiguration,
+		request.Put(req).
 			Set("Content-Type", "application/json").
 			Param("validate", strconv.FormatBool(validateCreds)).
 			Send(payload),
@@ -514,14 +583,81 @@ func logResponse(resp gorequest.Response, body []byte, errs []error) (gorequest.
 	return resp, body, errs
 }
 
-// Logging wrapper for sending a request
-func sendRequest(req *gorequest.SuperAgent) (gorequest.Response, []byte, []error) {
+type AnchoreVersion struct {
+	API struct {
+		Version string `json:"version"`
+	} `json:"api"`
+	DB struct {
+		SchemaVersion string `json:"schema_version"`
+	} `json:"db"`
+	Service struct {
+		Version string `json:"version"`
+	} `json:"service"`
+}
+
+func getAPIVersion(clientConfiguration *Config) (string, error) {
+	log.Debug("checking anchore API version")
+	request := getNewRequest(clientConfiguration)
+	reqURL, err := buildURL(*clientConfiguration, VersionURL, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, _, errs := sendRequest(clientConfiguration, request.Get(reqURL))
+	if errs != nil {
+		return "", errs[0]
+	}
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("error response from anchore api: %+v", resp.StatusCode)
+	}
+	bodyContent, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read Anchore API version: %w", err)
+	}
+	ver := AnchoreVersion{}
+	err = json.Unmarshal(bodyContent, &ver)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal Anchore API version: %w", err)
+	}
+	log.WithFields(log.Fields{"api": ver.API.Version, "db": ver.DB.SchemaVersion, "enterprise": ver.Service.Version}).
+		Debug("discovered anchore versions in use")
+	if ver.API.Version == "2" {
+		return "v2", nil
+	}
+	// Default to v1 if we can't determine the version as 4.X does not include api version in the /version API response
+	return "v1", nil
+}
+
+// Wrapper for sending a request to anchore
+// Logs the response and handles switching the Anchore API version if required
+func sendRequest(clientConfiguration *Config, req *gorequest.SuperAgent) (gorequest.Response, []byte, []error) {
 	t := time.Now()
 	log.WithFields(log.Fields{
-		"URL":    req.Url,
-		"method": req.Method,
+		"URL":                 req.Url,
+		"method":              req.Method,
+		"Anchore API Version": apiVersion,
 	}).Debug("sending request")
 	resp, body, errs := req.EndBytes()
 	log.WithField("duration", time.Since(t)).Debug("api call duration")
+	// If we get a 404 try to determine the running API version and switch to that
+	if resp != nil && resp.StatusCode == 404 {
+		var err error
+		prevAPIVersion := apiVersion
+		apiVersion, err = getAPIVersion(clientConfiguration)
+		if err != nil {
+			log.WithField("err", err).Error("error getting Anchore API version")
+		}
+		// If the API version has changed try the request again with the new API version
+		if prevAPIVersion != apiVersion {
+			log.WithFields(log.Fields{"prevAPIVersion": prevAPIVersion, "apiVersion": apiVersion}).
+				Info("Anchore API version changed trying request again")
+			req.Url = strings.Replace(
+				req.Url,
+				strings.Join([]string{clientConfiguration.Endpoint, prevAPIVersion}, "/"),
+				strings.Join([]string{clientConfiguration.Endpoint, apiVersion}, "/"),
+				1,
+			)
+			return sendRequest(clientConfiguration, req)
+		}
+	}
 	return logResponse(resp, body, errs)
 }
