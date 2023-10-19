@@ -208,6 +208,10 @@ func (h *APIHandler) GetScanReport(res http.ResponseWriter, req *http.Request) {
 			log.Info("valid scanId, but results not ready")
 			res.Header().Set("Location", req.URL.String())
 			SendErrorResponse(&res, "scan pending", http.StatusFound)
+		case "create scan not ready":
+			log.Info("valid scanId, but create scan not ready")
+			res.Header().Set("Location", req.URL.String())
+			SendErrorResponse(&res, "scan pending", http.StatusFound)
 		default:
 			log.Error("unknown internal error")
 			SendErrorResponse(&res, err.Error(), http.StatusInternalServerError)
