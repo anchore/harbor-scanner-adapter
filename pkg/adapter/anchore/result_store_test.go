@@ -138,8 +138,10 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 			name: "result found and scan complete",
 			fields: fields{Results: map[string]VulnerabilityResult{
 				"test1": {
-					ScanID:     "test1",
-					IsComplete: true,
+					ScanID:                "test1",
+					ScanCreated:           true,
+					ReportBuildInProgress: true,
+					IsComplete:            true,
 					Result: &harbor.VulnerabilityReport{
 						GeneratedAt: testTime,
 						Artifact: harbor.Artifact{
@@ -174,8 +176,10 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 				},
 			},
 			want: VulnerabilityResult{
-				ScanID:     "test1",
-				IsComplete: true,
+				ScanID:                "test1",
+				ScanCreated:           true,
+				ReportBuildInProgress: true,
+				IsComplete:            true,
 				Result: &harbor.VulnerabilityReport{
 					GeneratedAt: testTime,
 					Artifact: harbor.Artifact{
@@ -208,8 +212,9 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 			name: "result found and scan incomplete",
 			fields: fields{Results: map[string]VulnerabilityResult{
 				"test1": {
-					ScanID:     "test1",
-					IsComplete: false,
+					ScanID:      "test1",
+					ScanCreated: false,
+					IsComplete:  false,
 				},
 			}},
 			args: args{
@@ -219,15 +224,22 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 				},
 			},
 			want: VulnerabilityResult{
-				ScanID:     "test1",
-				IsComplete: false,
-				Result:     nil,
+				ScanID:      "test1",
+				ScanCreated: false,
+				IsComplete:  false,
+				Result:      nil,
 			},
 			wantResponseOnChannel: false,
 		},
 		{
-			name:   "error in build function",
-			fields: fields{Results: map[string]VulnerabilityResult{}},
+			name: "error in build function",
+			fields: fields{Results: map[string]VulnerabilityResult{
+				"test1": {
+					ScanID:                "test1",
+					ScanCreated:           true,
+					ReportBuildInProgress: false,
+				},
+			}},
 			args: args{
 				scanID: "test1",
 				buildFn: func() (*harbor.VulnerabilityReport, error) {
@@ -235,22 +247,32 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 				},
 			},
 			want: VulnerabilityResult{
-				ScanID:     "test1",
-				IsComplete: false,
-				Result:     nil,
+				ScanID:                "test1",
+				ScanCreated:           true,
+				ReportBuildInProgress: true,
+				IsComplete:            false,
+				Result:                nil,
 			},
 			wantResponseOnChannel: true,
 			wantErr:               true,
 			wantChannelResult: VulnerabilityResult{
-				ScanID:     "test1",
-				IsComplete: true,
-				Result:     nil,
-				Error:      fmt.Errorf("test error"),
+				ScanID:                "test1",
+				ScanCreated:           true,
+				ReportBuildInProgress: true,
+				IsComplete:            true,
+				Result:                nil,
+				Error:                 fmt.Errorf("test error"),
 			},
 		},
 		{
-			name:   "result not found",
-			fields: fields{Results: map[string]VulnerabilityResult{}},
+			name: "result not in progress so start it",
+			fields: fields{Results: map[string]VulnerabilityResult{
+				"test1": {
+					ScanID:                "test1",
+					ScanCreated:           true,
+					ReportBuildInProgress: false,
+				},
+			}},
 			args: args{
 				scanID: "test1",
 				buildFn: func() (*harbor.VulnerabilityReport, error) {
@@ -282,16 +304,20 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 				},
 			},
 			want: VulnerabilityResult{
-				ScanID:     "test1",
-				IsComplete: false,
-				Result:     nil,
-				Error:      fmt.Errorf("result not ready"),
+				ScanID:                "test1",
+				ScanCreated:           true,
+				ReportBuildInProgress: true,
+				IsComplete:            false,
+				Result:                nil,
+				Error:                 fmt.Errorf("result not ready"),
 			},
 			wantResponseOnChannel: true,
 			wantErr:               true,
 			wantChannelResult: VulnerabilityResult{
-				ScanID:     "test1",
-				IsComplete: true,
+				ScanID:                "test1",
+				ScanCreated:           true,
+				ReportBuildInProgress: true,
+				IsComplete:            true,
 				Result: &harbor.VulnerabilityReport{
 					GeneratedAt: testTime,
 					Artifact: harbor.Artifact{
