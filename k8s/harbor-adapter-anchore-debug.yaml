@@ -1,0 +1,81 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: harbor-scanner-anchore
+  labels:
+    app: harbor-scanner-anchore
+spec:
+  selector:
+    matchLabels:
+      app: harbor-scanner-anchore
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: harbor-scanner-anchore
+    spec:
+      containers:
+        - name: adapter
+          image: anchore/harbor-scanner-adapter:debug
+          imagePullPolicy: Never
+          env:
+            - name: SCANNER_ADAPTER_LISTEN_ADDR
+              value: ":8080"
+            - name: ANCHORE_ENDPOINT
+              value: "http://host.docker.internal:8228"
+            - name: ANCHORE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: anchore-creds
+                  key: username
+            - name: ANCHORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: anchore-creds
+                  key: password
+            - name: ANCHORE_CLIENT_TIMEOUT_SECONDS
+              value: "60"
+            - name: SCANNER_ADAPTER_FILTER_VENDOR_IGNORED
+              value: "true"
+            - name: SCANNER_ADAPTER_LOG_LEVEL
+              value: "debug"
+            - name: SCANNER_ADAPTER_REGISTRY_TLS_VERIFY
+              value: "false"
+# To enable api authentication, uncomment this and set it to a good randomized value. Use that same value in the scanner config in Harbor UI with "Bearer" type
+#            - name: "SCANNER_ADAPTER_APIKEY"
+#              value: "apikey123"
+
+# Uncomment below to enable https in api
+#            - name: SCANNER_ADAPTER_TLS_KEY_FILE
+#              value: "/certs/tls.key"
+#            - name: SCANNER_ADAPTER_TLS_CERT_FILE
+#              value: "/certs/tls.crt"
+
+#          volumeMounts:
+#            - name: certs
+#              mountPath: /certs
+#          ports:
+#            - containerPort: 8080
+#      volumes:
+#        - name: certs
+#          secret:
+#            secretName: adapter-certs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: harbor-scanner-anchore-debug
+spec:
+  selector:
+    app: harbor-scanner-anchore
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      name: app
+      port: 8080
+      targetPort: 8080
+    - protocol: TCP
+      name: dlv
+      port: 2345
+      targetPort: 2345
