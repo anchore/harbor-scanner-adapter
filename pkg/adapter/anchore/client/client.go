@@ -303,6 +303,7 @@ func GetImageVulnerabilities(
 	clientConfiguration *Config,
 	digest string,
 	filterIgnored bool,
+	retryCount int,
 ) (anchore.ImageVulnerabilityReport, error) {
 	log.WithFields(log.Fields{"digest": digest, "filterIgnored": filterIgnored}).Debug("retrieving scan result for image")
 
@@ -329,6 +330,7 @@ func GetImageVulnerabilities(
 			if err != nil {
 				return anchore.ImageVulnerabilityReport(imageVulnerabilityReportV1), err
 			}
+			log.Debug("returning v1 image vulnerability report")
 			return anchore.ImageVulnerabilityReport(imageVulnerabilityReportV1), nil
 		}
 		err := json.Unmarshal(body, &imageVulnerabilityReport)
@@ -337,10 +339,27 @@ func GetImageVulnerabilities(
 		}
 		return imageVulnerabilityReport, nil
 	}
+	if resp.StatusCode == 404 {
+		log.WithFields(log.Fields{"digest": digest}).
+			Debug("Received 404 getting Image vulnerabilities from Anchore, image not found in Anchore")
+
+		// TODO Make the retry count configurable and backoff retries
+		// Anchore returns 404 if the image is not found, retry up to 5 times
+		// This is to handle the case where the image is still being submitted for analysis
+		// and the image is not yet available in the Anchore DB
+		if retryCount < 5 {
+			log.WithFields(log.Fields{"digest": digest, "retryCount": retryCount}).
+				Debug("retrying get image vulnerabilities")
+			time.Sleep(5 * time.Second)
+			return GetImageVulnerabilities(clientConfiguration, digest, filterIgnored, retryCount+1)
+		}
+
+		return imageVulnerabilityReport, fmt.Errorf("not found")
+	}
 	return imageVulnerabilityReport, fmt.Errorf("error response from anchore api")
 }
 
-func GetImage(clientConfiguration *Config, digest string) (anchore.Image, error) {
+func GetImage(clientConfiguration *Config, digest string, retryCount int) (anchore.Image, error) {
 	log.WithFields(log.Fields{"digest": digest}).Debug("retrieving anchore state for image")
 
 	var image anchore.Image
@@ -353,10 +372,28 @@ func GetImage(clientConfiguration *Config, digest string) (anchore.Image, error)
 
 	log.WithFields(log.Fields{"method": "get", "url": reqURL}).Debug("sending request to anchore api")
 	// call API get the full report until "analysis_status" = "analyzed"
-	_, body, errs := sendRequest(clientConfiguration, request.Get(reqURL))
+	resp, body, errs := sendRequest(clientConfiguration, request.Get(reqURL))
 	if errs != nil {
 		log.Errorf("could not contact anchore api")
 		return image, errs[0]
+	}
+
+	if resp.StatusCode == 404 {
+		log.WithFields(log.Fields{"digest": digest}).
+			Debug("Received 404 getting Image from Anchore, image not found in Anchore")
+
+		// TODO Make the retry count configurable and backoff retries
+		// Anchore returns 404 if the image is not found, retry up to 5 times
+		// This is to handle the case where the image is still being submitted for analysis
+		// and the image is not yet available in the Anchore DB
+		if retryCount < 5 {
+			log.WithFields(log.Fields{"digest": digest, "retryCount": retryCount}).
+				Debug("retrying image status check")
+			time.Sleep(5 * time.Second)
+			return GetImage(clientConfiguration, digest, retryCount+1)
+		}
+
+		return image, fmt.Errorf("not found")
 	}
 
 	if apiVersion == "v1" {
