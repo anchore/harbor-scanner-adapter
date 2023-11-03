@@ -1,0 +1,20 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Debug",
+			"type": "go",
+			"debugAdapter": "dlv-dap",
+			"request": "attach",
+			"mode": "remote",
+			"port": 2345,
+			"host": "localhost",
+		    "substitutePath": [
+			{
+			  "from": "${workspaceFolder}",
+			  "to": "/go/src/github.com/anchore/harbor-scanner-adapter"
+			}
+		    ]
+		}
+	]
+}

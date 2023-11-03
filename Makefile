@@ -80,6 +80,26 @@ lint-fix: ## Auto-format all source code + run golangci lint fixers
 build:
 	$(TEMPDIR)/goreleaser build --clean --snapshot
 
+.PHONY: debug
+debug: debug-build debug-run
+
+.PHONY: debug-build
+debug-build:
+	docker build -f Dockerfile-dev -t anchore/harbor-scanner-adapter:debug .
+
+.PHONY: debug-stop
+debug-stop:
+	kubectl delete -l app=harbor-scanner-anchore
+
+.PHONY: debug-run
+debug-run:
+	kubectl apply -f ./k8s/harbor-adapter-anchore-debug.yaml
+	kubectl port-forward $(shell kubectl get pods -o name -l app=harbor-scanner-anchore) 2345:2345 8080:8080
+
+.PHONY: debug-logs
+debug-logs:
+	kubectl logs -f $(shell kubectl get pods -o name -l app=harbor-scanner-anchore)
+
 .PHONY: test
 test:
 	CGO_ENABLED=0 go test ./...
