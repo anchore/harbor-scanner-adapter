@@ -122,7 +122,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 		scanID  string
 		buildFn func() (*harbor.VulnerabilityReport, error)
 	}
-	resultStore = MemoryResultStore{Results: make(map[string]VulnerabilityResult, 1000)}
+	resultStore = &MemoryResultStore{Results: make(map[string]VulnerabilityResult, 1000)}
 	resultChannel = make(chan VulnerabilityResult)
 	testTime := time.Now()
 	tests := []struct {
@@ -140,6 +140,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 				"test1": {
 					ScanID:                "test1",
 					ScanCreated:           true,
+					AnalysisComplete:      true,
 					ReportBuildInProgress: true,
 					IsComplete:            true,
 					Result: &harbor.VulnerabilityReport{
@@ -180,6 +181,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 				ScanCreated:           true,
 				ReportBuildInProgress: true,
 				IsComplete:            true,
+				AnalysisComplete:      true,
 				Result: &harbor.VulnerabilityReport{
 					GeneratedAt: testTime,
 					Artifact: harbor.Artifact{
@@ -236,6 +238,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 			fields: fields{Results: map[string]VulnerabilityResult{
 				"test1": {
 					ScanID:                "test1",
+					AnalysisComplete:      true,
 					ScanCreated:           true,
 					ReportBuildInProgress: false,
 				},
@@ -249,6 +252,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 			want: VulnerabilityResult{
 				ScanID:                "test1",
 				ScanCreated:           true,
+				AnalysisComplete:      true,
 				ReportBuildInProgress: true,
 				IsComplete:            false,
 				Result:                nil,
@@ -258,6 +262,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 			wantChannelResult: VulnerabilityResult{
 				ScanID:                "test1",
 				ScanCreated:           true,
+				AnalysisComplete:      true,
 				ReportBuildInProgress: true,
 				IsComplete:            true,
 				Result:                nil,
@@ -270,6 +275,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 				"test1": {
 					ScanID:                "test1",
 					ScanCreated:           true,
+					AnalysisComplete:      true,
 					ReportBuildInProgress: false,
 				},
 			}},
@@ -306,6 +312,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 			want: VulnerabilityResult{
 				ScanID:                "test1",
 				ScanCreated:           true,
+				AnalysisComplete:      true,
 				ReportBuildInProgress: true,
 				IsComplete:            false,
 				Result:                nil,
@@ -316,6 +323,7 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 			wantChannelResult: VulnerabilityResult{
 				ScanID:                "test1",
 				ScanCreated:           true,
+				AnalysisComplete:      true,
 				ReportBuildInProgress: true,
 				IsComplete:            true,
 				Result: &harbor.VulnerabilityReport{

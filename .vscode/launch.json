@@ -14,7 +14,8 @@
 			  "from": "${workspaceFolder}",
 			  "to": "/go/src/github.com/anchore/harbor-scanner-adapter"
 			}
-		    ]
+		    ],
+			"program": "${workspaceFolder}/cmd/harbor-scanner-adapter/main.go"
 		}
 	]
 }
