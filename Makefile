@@ -94,11 +94,11 @@ debug-stop:
 .PHONY: debug-run
 debug-run:
 	kubectl apply -f ./k8s/harbor-adapter-anchore-debug.yaml
-	kubectl port-forward $(shell kubectl get pods -o name | grep harbor-scanner-anchore) 2345:2345 8080:8080
+	kubectl port-forward $(shell kubectl get pods -o name -l app=harbor-scanner-anchore) 2345:2345 8080:8080
 
 .PHONY: debug-logs
 debug-logs:
-	kubectl logs -f $(shell kubectl get pods -o name | grep harbor-scanner-anchore)
+	kubectl logs -f $(shell kubectl get pods -o name -l app=harbor-scanner-anchore)
 
 .PHONY: test
 test:
