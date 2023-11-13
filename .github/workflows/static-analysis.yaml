@@ -15,7 +15,7 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Restore bootstrap cache
         id: bootstrap-cache
