@@ -43,7 +43,7 @@ jobs:
       - name: Run unit tests
         run: make test
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: unit-test-results
           path: test/results/**/*
