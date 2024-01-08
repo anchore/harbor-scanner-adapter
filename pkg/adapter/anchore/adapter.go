@@ -522,6 +522,10 @@ func (s *HarborScannerAdapter) GetRawVulnerabilityReport(scanID string) (harbor.
 		if rawResult.Error != nil {
 			return nil, result.Error
 		}
+		// If the original scan contains an eror then return as this indicates the image is not in Anchore Enterprise
+		if result.Error != nil {
+			return nil, result.Error
+		}
 		return nil, fmt.Errorf("create scan not ready")
 	}
 
