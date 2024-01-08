@@ -95,7 +95,7 @@ func AnalyzeImage(clientConfiguration *Config, analyzeRequest anchore.ImageScanR
 	}
 	if resp.StatusCode != 200 {
 		log.WithFields(log.Fields{"body": string(body), "request": reqURL}).Debug("response from anchore api")
-		return fmt.Errorf("request failed with status %v", resp.StatusCode)
+		return fmt.Errorf("request failed with status %v: %v", resp.StatusCode, string(body))
 	}
 	return nil
 }
