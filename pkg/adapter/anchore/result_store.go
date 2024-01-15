@@ -51,6 +51,8 @@ type VulnerabilityResult struct {
 	AnalysisComplete      bool
 	ReportBuildInProgress bool
 	IsComplete            bool
+	RawIsComplete         bool
+	RawResultRequested    bool
 	Result                *harbor.VulnerabilityReport
 	RawResult             *anchore.ImageVulnerabilityReport
 	Error                 error
@@ -91,7 +93,7 @@ func (m *MemoryResultStore) PopResult(scanID string) (VulnerabilityResult, bool)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	found, ok := m.Results[scanID]
-	if found.IsComplete {
+	if found.IsComplete && (found.RawResultRequested == found.RawIsComplete) {
 		log.WithField("scanId", scanID).Debug("found completed result and removing from store to return to caller")
 		delete(m.Results, scanID)
 	} else {

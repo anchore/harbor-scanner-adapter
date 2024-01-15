@@ -69,14 +69,57 @@ func TestMemoryResultStore_PopResult(t *testing.T) {
 		expectedResultStoreAfterPopResult fields
 	}{
 		{
-			name: "result found and scan complete",
+			name: "result found and scan complete, raw result complete",
 			fields: fields{
-				Results: map[string]VulnerabilityResult{"test1": {ScanID: "test1", IsComplete: true}},
+				Results: map[string]VulnerabilityResult{
+					"test1": {ScanID: "test1", IsComplete: true, RawIsComplete: true, RawResultRequested: true},
+				},
 			},
-			args:                              args{"test1"},
-			want:                              VulnerabilityResult{ScanID: "test1", IsComplete: true},
+			args: args{"test1"},
+			want: VulnerabilityResult{
+				ScanID:             "test1",
+				IsComplete:         true,
+				RawIsComplete:      true,
+				RawResultRequested: true,
+			},
 			want1:                             true,
 			expectedResultStoreAfterPopResult: fields{Results: map[string]VulnerabilityResult{}},
+		},
+		{
+			name: "result found and scan complete, raw result not requested",
+			fields: fields{
+				Results: map[string]VulnerabilityResult{
+					"test1": {ScanID: "test1", IsComplete: true, RawIsComplete: false, RawResultRequested: false},
+				},
+			},
+			args: args{"test1"},
+			want: VulnerabilityResult{
+				ScanID:     "test1",
+				IsComplete: true,
+			},
+			want1:                             true,
+			expectedResultStoreAfterPopResult: fields{Results: map[string]VulnerabilityResult{}},
+		},
+		{
+			name: "result found and scan complete, raw result requested not complete",
+			fields: fields{
+				Results: map[string]VulnerabilityResult{
+					"test1": {ScanID: "test1", IsComplete: true, RawIsComplete: false, RawResultRequested: true},
+				},
+			},
+			args: args{"test1"},
+			want: VulnerabilityResult{
+				ScanID:             "test1",
+				IsComplete:         true,
+				RawIsComplete:      false,
+				RawResultRequested: true,
+			},
+			want1: true,
+			expectedResultStoreAfterPopResult: fields{
+				Results: map[string]VulnerabilityResult{
+					"test1": {ScanID: "test1", IsComplete: true, RawIsComplete: false, RawResultRequested: true},
+				},
+			},
 		},
 		{
 			name: "result not found",
