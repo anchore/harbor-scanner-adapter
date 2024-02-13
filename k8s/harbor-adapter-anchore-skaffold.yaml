@@ -42,6 +42,8 @@ spec:
               value: "debug"
             - name: SCANNER_ADAPTER_REGISTRY_TLS_VERIFY
               value: "false"
+            - name: SCANNER_ADAPTER_IGNORE_HARBOR_CREDS
+              value: "false"
 # To enable api authentication, uncomment this and set it to a good randomized value. Use that same value in the scanner config in Harbor UI with "Bearer" type
 #            - name: "SCANNER_ADAPTER_APIKEY"
 #              value: "apikey123"

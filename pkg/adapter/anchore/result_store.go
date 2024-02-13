@@ -39,23 +39,25 @@ type ResultStore interface {
 	) // Update a result in the store
 	GetResult(
 		scanID string,
-	) VulnerabilityResult // Get a result if it exists
+	) (VulnerabilityResult, bool) // Get a result if it exists
 	PopResult(
 		scanID string,
 	) (VulnerabilityResult, bool) // Returns a result and true if found, false if not (e.g. like hash map interface)
 }
 
 type VulnerabilityResult struct {
-	ScanID                string
-	ScanCreated           bool
-	AnalysisComplete      bool
-	ReportBuildInProgress bool
-	IsComplete            bool
-	RawIsComplete         bool
-	RawResultRequested    bool
-	Result                *harbor.VulnerabilityReport
-	RawResult             *anchore.ImageVulnerabilityReport
-	Error                 error
+	ScanID                   string
+	ScanCreated              bool
+	AnalysisComplete         bool
+	ReportBuildInProgress    bool
+	RAWReportBuildInProgress bool
+	IsComplete               bool
+	RawIsComplete            bool
+	RawResultRequested       bool
+	Result                   *harbor.VulnerabilityReport
+	RawResult                *anchore.ImageVulnerabilityReport
+	ReturnCount              int
+	Error                    error
 }
 
 type MemoryResultStore struct {
@@ -82,19 +84,33 @@ func (m *MemoryResultStore) HasResult(scanID string) bool {
 	return ok && found.IsComplete
 }
 
-func (m *MemoryResultStore) GetResult(scanID string) VulnerabilityResult {
+func (m *MemoryResultStore) GetResult(scanID string) (VulnerabilityResult, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	found := m.Results[scanID]
-	return found
+	found, ok := m.Results[scanID]
+	return found, ok
 }
 
 func (m *MemoryResultStore) PopResult(scanID string) (VulnerabilityResult, bool) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer func() {
+		m.mu.Unlock()
+		log.WithField("CacheSize", len(m.Results)).Debug("Cache size - after pop")
+	}()
+
+	log.WithField("CacheSize", len(m.Results)).Debug("Cache size - before pop")
+
 	found, ok := m.Results[scanID]
-	if found.IsComplete && (found.RawResultRequested == found.RawIsComplete) {
-		log.WithField("scanId", scanID).Debug("found completed result and removing from store to return to caller")
+	if found.IsComplete || (found.RawResultRequested == found.RawIsComplete) {
+		found.ReturnCount++
+		m.Results[scanID] = found
+	}
+	log.WithFields(log.Fields{"returnCount": found.ReturnCount, "isComplete": found.IsComplete, "RawResultRequested": found.RawResultRequested, "RawIsComplete": found.RawIsComplete}).
+		Debug("Found result in store")
+
+	if (found.RawResultRequested && found.ReturnCount >= 2) || (!found.RawResultRequested && found.ReturnCount >= 1) {
+		log.WithFields(log.Fields{"scanId": scanID, "isComplete": found.IsComplete, "RawResultRequested": found.RawResultRequested, "RawIsComplete": found.RawIsComplete}).
+			Debug("Removing from store")
 		delete(m.Results, scanID)
 	} else {
 		log.WithField("scanId", scanID).Debug("found result in store, but not complete, so not removing from store")
@@ -120,28 +136,40 @@ func (m *MemoryResultStore) RequestCreateScan(
 		// Result not found so begin the async fetch
 		go func() {
 			imageAdded, err := buildFn()
+			currentState := m.Results[scanID]
 			if err != nil {
 				log.Debugf("error creating scan for %v: %v", scanID, err)
 				// Set IsComplete to true to remove the scan from the store if the create scan fails so that it can be retried without using the cache.
 				resultChannel <- VulnerabilityResult{
-					ScanID:                scanID,
-					ScanCreated:           false,
-					AnalysisComplete:      false,
-					ReportBuildInProgress: false,
-					IsComplete:            true,
-					Result:                nil,
-					Error:                 err,
+					ScanID:                   scanID,
+					ScanCreated:              false,
+					AnalysisComplete:         false,
+					ReportBuildInProgress:    false,
+					RAWReportBuildInProgress: currentState.RAWReportBuildInProgress,
+					IsComplete:               true,
+					RawResultRequested:       currentState.RawResultRequested,
+					// We want this to match the raw result requested on error so
+					// that on error the result is correctly popped from the cache
+					// regardless of whether the raw result is requested or not
+					RawIsComplete: currentState.RawResultRequested,
+					Result:        nil,
+					ReturnCount:   currentState.ReturnCount,
+					Error:         err,
 				}
 			} else {
 				log.Debugf("create scan finished for %v", scanID)
 				resultChannel <- VulnerabilityResult{
-					ScanID:                scanID,
-					ScanCreated:           imageAdded,
-					AnalysisComplete:      false,
-					ReportBuildInProgress: false,
-					IsComplete:            false,
-					Result:                nil,
-					Error:                 nil,
+					ScanID:                   scanID,
+					ScanCreated:              imageAdded,
+					AnalysisComplete:         false,
+					ReportBuildInProgress:    false,
+					RAWReportBuildInProgress: currentState.RAWReportBuildInProgress,
+					IsComplete:               false,
+					RawResultRequested:       currentState.RawResultRequested,
+					RawIsComplete:            currentState.RawIsComplete,
+					Result:                   nil,
+					ReturnCount:              currentState.ReturnCount,
+					Error:                    nil,
 				}
 			}
 		}()
@@ -152,6 +180,7 @@ func (m *MemoryResultStore) RequestCreateScan(
 			ReportBuildInProgress: false,
 			IsComplete:            false,
 			Result:                nil,
+			ReturnCount:           0,
 			Error:                 fmt.Errorf("create scan not ready"),
 		}
 		m.SafeUpdateResult(scanID, newScan)
@@ -173,24 +202,35 @@ func (m *MemoryResultStore) RequestAnalysisStatus(
 				log.Debugf("error checking analysis state for %v: %v", scanID, err)
 				// Set IsComplete to true to remove the scan from the store if the create scan fails so that it can be retried without using the cache.
 				resultChannel <- VulnerabilityResult{
-					ScanID:                scanID,
-					ScanCreated:           true,
-					AnalysisComplete:      false,
-					ReportBuildInProgress: currentState.ReportBuildInProgress,
-					IsComplete:            true,
-					Result:                nil,
-					Error:                 err,
+					ScanID:                   scanID,
+					ScanCreated:              true,
+					AnalysisComplete:         false,
+					ReportBuildInProgress:    currentState.ReportBuildInProgress,
+					RAWReportBuildInProgress: currentState.RAWReportBuildInProgress,
+					RawResultRequested:       currentState.RawResultRequested,
+					// We want this to match the raw result requested on error so
+					// that on error the result is correctly popped from the cache
+					// regardless of whether the raw result is requested or not
+					RawIsComplete: currentState.RawResultRequested,
+					IsComplete:    true,
+					Result:        nil,
+					ReturnCount:   currentState.ReturnCount,
+					Error:         err,
 				}
 			} else {
 				log.Debugf("checking analysis state complete for %v", scanID)
 				resultChannel <- VulnerabilityResult{
-					ScanID:                scanID,
-					ScanCreated:           true,
-					AnalysisComplete:      complete,
-					ReportBuildInProgress: currentState.ReportBuildInProgress,
-					IsComplete:            currentState.IsComplete,
-					Result:                currentState.Result,
-					Error:                 nil,
+					ScanID:                   scanID,
+					ScanCreated:              true,
+					AnalysisComplete:         complete,
+					ReportBuildInProgress:    currentState.ReportBuildInProgress,
+					RAWReportBuildInProgress: currentState.RAWReportBuildInProgress,
+					RawResultRequested:       currentState.RawResultRequested,
+					RawIsComplete:            currentState.RawIsComplete,
+					IsComplete:               currentState.IsComplete,
+					Result:                   currentState.Result,
+					ReturnCount:              currentState.ReturnCount,
+					Error:                    nil,
 				}
 			}
 		}()
@@ -212,28 +252,40 @@ func (m *MemoryResultStore) RequestResult(
 		// Result not found so begin the async fetch
 		go func() {
 			result, err := buildFn()
+			currentState := m.Results[scanID]
 			if err != nil {
 				log.Debugf("error building result for %v: %v", scanID, err)
 				// Set IsComplete to true to remove the scan from the store so that it can be retried without using the cache.
 				resultChannel <- VulnerabilityResult{
-					ScanID:                scanID,
-					ScanCreated:           true,
-					AnalysisComplete:      true,
-					ReportBuildInProgress: true,
-					IsComplete:            true,
-					Result:                nil,
-					Error:                 err,
+					ScanID:                   scanID,
+					ScanCreated:              true,
+					AnalysisComplete:         true,
+					ReportBuildInProgress:    true,
+					RAWReportBuildInProgress: currentState.RAWReportBuildInProgress,
+					RawResultRequested:       currentState.RawResultRequested,
+					// We want this to match the raw result requested on error so
+					// that on error the result is correctly popped from the cache
+					// regardless of whether the raw result is requested or not
+					RawIsComplete: currentState.RawResultRequested,
+					IsComplete:    true,
+					Result:        nil,
+					ReturnCount:   currentState.ReturnCount,
+					Error:         err,
 				}
 			} else {
 				log.Debugf("result built for %v", scanID)
 				resultChannel <- VulnerabilityResult{
-					ScanID:                scanID,
-					ScanCreated:           true,
-					AnalysisComplete:      true,
-					ReportBuildInProgress: true,
-					IsComplete:            true,
-					Result:                result,
-					Error:                 nil,
+					ScanID:                   scanID,
+					ScanCreated:              true,
+					AnalysisComplete:         true,
+					ReportBuildInProgress:    true,
+					RAWReportBuildInProgress: currentState.RAWReportBuildInProgress,
+					RawResultRequested:       currentState.RawResultRequested,
+					RawIsComplete:            currentState.RawIsComplete,
+					IsComplete:               true,
+					Result:                   result,
+					ReturnCount:              currentState.ReturnCount,
+					Error:                    nil,
 				}
 			}
 		}()
@@ -250,40 +302,50 @@ func (m *MemoryResultStore) RequestRawResult(
 ) VulnerabilityResult {
 	existing, _ := m.PopResult(scanID)
 
-	if !existing.ReportBuildInProgress && existing.ScanCreated && existing.AnalysisComplete {
+	if !existing.RAWReportBuildInProgress && existing.ScanCreated && existing.AnalysisComplete {
 		log.Debug("Scan created, beginning raw report build")
 		// Result not found so begin the async fetch
 		go func() {
 			result, err := buildFn()
+			currentState := m.Results[scanID]
 			if err != nil {
 				log.Debugf("error building raw result for %v: %v", scanID, err)
 				// Set IsComplete to true to remove the scan from the store so that it can be retried without using the cache.
 				resultChannel <- VulnerabilityResult{
-					ScanID:                scanID,
-					ScanCreated:           true,
-					AnalysisComplete:      true,
-					ReportBuildInProgress: true,
-					IsComplete:            true,
-					Result:                nil,
-					Error:                 err,
+					ScanID:                   scanID,
+					ScanCreated:              true,
+					AnalysisComplete:         true,
+					ReportBuildInProgress:    currentState.ReportBuildInProgress,
+					RAWReportBuildInProgress: true,
+					RawResultRequested:       true,
+					RawIsComplete:            true,
+					IsComplete:               currentState.IsComplete,
+					Result:                   currentState.Result,
+					ReturnCount:              currentState.ReturnCount,
+					Error:                    err,
 				}
 			} else {
 				log.Debugf("raw result built for %v", scanID)
 				resultChannel <- VulnerabilityResult{
-					ScanID:                scanID,
-					ScanCreated:           true,
-					AnalysisComplete:      true,
-					ReportBuildInProgress: true,
-					IsComplete:            true,
-					Result:                nil,
-					RawResult:             result,
-					Error:                 nil,
+					ScanID:                   scanID,
+					ScanCreated:              true,
+					AnalysisComplete:         true,
+					ReportBuildInProgress:    currentState.ReportBuildInProgress,
+					RAWReportBuildInProgress: true,
+					RawResultRequested:       currentState.RawResultRequested,
+					RawIsComplete:            true,
+					IsComplete:               currentState.IsComplete,
+					Result:                   currentState.Result,
+					RawResult:                result,
+					ReturnCount:              currentState.ReturnCount,
+					Error:                    nil,
 				}
 			}
 		}()
-		existing.ReportBuildInProgress = true
+		existing.RAWReportBuildInProgress = true
 		existing.Error = fmt.Errorf("result not ready")
 		m.SafeUpdateResult(scanID, existing)
+		log.Debug("UPDATED RAW BUILD IN PROGRESS")
 	}
 	return existing
 }
