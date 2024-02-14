@@ -39,7 +39,7 @@ type ResultStore interface {
 	) // Update a result in the store
 	GetResult(
 		scanID string,
-	) VulnerabilityResult // Get a result if it exists
+	) (VulnerabilityResult, bool) // Get a result if it exists
 	PopResult(
 		scanID string,
 	) (VulnerabilityResult, bool) // Returns a result and true if found, false if not (e.g. like hash map interface)
@@ -80,16 +80,22 @@ func (m *MemoryResultStore) HasResult(scanID string) bool {
 	return ok && found.IsComplete
 }
 
-func (m *MemoryResultStore) GetResult(scanID string) VulnerabilityResult {
+func (m *MemoryResultStore) GetResult(scanID string) (VulnerabilityResult, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	found := m.Results[scanID]
-	return found
+	found, ok := m.Results[scanID]
+	return found, ok
 }
 
 func (m *MemoryResultStore) PopResult(scanID string) (VulnerabilityResult, bool) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer func() {
+		m.mu.Unlock()
+		log.WithField("CacheSize", len(m.Results)).Debug("Cache size - after pop")
+	}()
+
+	log.WithField("CacheSize", len(m.Results)).Debug("Cache size - before pop")
+
 	found, ok := m.Results[scanID]
 	if found.IsComplete {
 		log.WithField("scanId", scanID).Debug("found completed result and removing from store to return to caller")

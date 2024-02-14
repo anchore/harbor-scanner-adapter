@@ -372,3 +372,44 @@ func TestMemoryResultStore_RequestResult(t *testing.T) {
 		})
 	}
 }
+
+func TestMemoryResultStore_GetResult(t *testing.T) {
+	type fields struct {
+		Results map[string]VulnerabilityResult
+	}
+	type args struct {
+		scanID string
+	}
+	tests := []struct {
+		name           string
+		fields         fields
+		args           args
+		want           VulnerabilityResult
+		expectedResult bool
+	}{
+		{
+			name:           "result found",
+			fields:         fields{Results: map[string]VulnerabilityResult{"test1": {ScanID: "test1"}}},
+			args:           args{"test1"},
+			want:           VulnerabilityResult{ScanID: "test1"},
+			expectedResult: true,
+		},
+		{
+			name:           "no result found",
+			fields:         fields{Results: map[string]VulnerabilityResult{}},
+			args:           args{"test1"},
+			want:           VulnerabilityResult{},
+			expectedResult: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MemoryResultStore{
+				Results: tt.fields.Results,
+			}
+			got, ok := m.GetResult(tt.args.scanID)
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.expectedResult, ok)
+		})
+	}
+}
