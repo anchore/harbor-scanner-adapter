@@ -513,7 +513,15 @@ func (s *HarborScannerAdapter) GetRawVulnerabilityReport(scanID string) (harbor.
 
 	rawScanID := fmt.Sprintf("%s-raw", scanID) // Used to store just the raw report results in the rawResult store
 	rawResult, _ := resultStore.PopResult(rawScanID)
-	result := resultStore.GetResult(scanID)
+	result, resultFound := resultStore.GetResult(scanID)
+
+	// If there is no entry in the cache for the base scanID (harbor formatted report) and the raw ScanCreated is false
+	// then the original create scan request was unsuccessful, likely due to the image being unable to be added to Anchore
+	// so we need to fail fast.
+	if !resultFound && !rawResult.ScanCreated {
+		log.WithFields(log.Fields{"scanId": scanID}).Debug("scan creation failed, no result found in store for scanId")
+		return nil, fmt.Errorf("create scan unsuccessful")
+	}
 
 	// Check Scan has been created for the non-report report. This ensures the image is in Anchore Enterprise and submitted for analysis.
 	if !rawResult.ScanCreated && !result.ScanCreated {
