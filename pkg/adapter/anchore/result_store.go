@@ -172,7 +172,7 @@ func (m *MemoryResultStore) RequestAnalysisStatus(
 		// Result not found so begin the async fetch
 		go func() {
 			complete, err := buildFn()
-			currentState := m.Results[scanID]
+			currentState, _ := m.GetResult(scanID)
 			if err != nil {
 				log.Debugf("error checking analysis state for %v: %v", scanID, err)
 				// Set IsComplete to true to remove the scan from the store if the create scan fails so that it can be retried without using the cache.
