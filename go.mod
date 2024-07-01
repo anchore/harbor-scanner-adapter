@@ -3,7 +3,7 @@ module github.com/anchore/harbor-scanner-adapter
 go 1.21.0
 
 require (
-	github.com/aws/aws-sdk-go v1.54.10
+	github.com/aws/aws-sdk-go v1.54.11
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 	github.com/gorilla/mux v1.8.1
 	github.com/parnurzeal/gorequest v0.3.0
