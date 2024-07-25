@@ -15,6 +15,8 @@ builds:
     goos:
       - linux
       - darwin
+    ldflags:
+      - -X github.com/anchore/harbor-scanner-adapter/pkg/adapter.AdapterVersion={{.Version}} 
 checksum:
   name_template: 'checksums.txt'
 snapshot:

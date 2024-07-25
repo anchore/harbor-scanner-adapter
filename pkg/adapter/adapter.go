@@ -12,34 +12,36 @@ const (
 	HarborMetadataVulnDBUpdateKey = "harbor.scanner-adapter/vulnerability-database-updated-at"
 	HarborMetadataScannerTypeKey  = "harbor.scanner-adapter/scanner-type"
 	AdapterType                   = "os-package-vulnerability" // #nosec G101
-	AdapterVersion                = "1.3.2"
 	AdapterVendor                 = "Anchore Inc."
 	AdapterName                   = "Anchore"
 )
 
-var AdapterMetadata = harbor.ScannerAdapterMetadata{
-	Scanner: harbor.Scanner{
-		Name:    AdapterName,
-		Version: AdapterVersion,
-		Vendor:  AdapterVendor,
-	},
-	Capabilities: []harbor.Capability{
-		{
-			ConsumesMIMETypes: []string{
-				DockerImageMimeType,
-				OciImageMimeType,
-			},
-			ProducesMIMETypes: []string{
-				HarborVulnReportv1MimeType,
-				RawVulnReportMimeType,
+var (
+	AdapterVersion  = "dev"
+	AdapterMetadata = harbor.ScannerAdapterMetadata{
+		Scanner: harbor.Scanner{
+			Name:    AdapterName,
+			Version: AdapterVersion,
+			Vendor:  AdapterVendor,
+		},
+		Capabilities: []harbor.Capability{
+			{
+				ConsumesMIMETypes: []string{
+					DockerImageMimeType,
+					OciImageMimeType,
+				},
+				ProducesMIMETypes: []string{
+					HarborVulnReportv1MimeType,
+					RawVulnReportMimeType,
+				},
 			},
 		},
-	},
-	Properties: map[string]string{
-		HarborMetadataVulnDBUpdateKey: "", // This gets updated in response to requests from Harbor
-		HarborMetadataScannerTypeKey:  AdapterType,
-	},
-}
+		Properties: map[string]string{
+			HarborMetadataVulnDBUpdateKey: "", // This gets updated in response to requests from Harbor
+			HarborMetadataScannerTypeKey:  AdapterType,
+		},
+	}
+)
 
 // ScannerAdapter defines methods for scanning container images.
 type ScannerAdapter interface {
