@@ -85,6 +85,7 @@ Adapter configuration values. These cannot be set in the client config file, onl
 | SCANNER_ADAPTER_REPORT_CACHE_TTL | The ttl, in seconds, for raw Anchore vulnerability reports in the adapter, which are re-used for the Harbor format and raw format responses. A good value here is at least 10 seconds. | 180 |
 | SCANNER_ADAPTER_DB_UPDATE_CACHE_ENABLED | Boolean to enable caching of the Anchore vulnerability db updated timestamp to reduce call volume between the adapter and Anchore. Harbor tends to check the update timestamp often so this reduces calls to Anchore. | True |
 | SCANNER_ADAPTER_DB_UPDATE_CACHE_TTL | The number of seconds to keep the last db update timestamp before checking the Anchore service again. The service check to Anchore is a bit resource intensive so this value helps reduce load on Anchore from the Adapter | 60 | 
+| SCANNER_ADAPTER_ENABLE_RAW_MIME_TYPE | Enable/Disable the RAW MIME type from the adapter | True | 
 | ANCHORE_ENDPOINT | The url to reach the Anchore API (e.g https://anchore.mydomain.com) | null |
 | ANCHORE_USERNAME | The username the Adapter will use to authenticate API calls against Anchore itself. This must be a username within Anchore, not a Harbor user. | null | 
 | ANCHORE_PASSWORD | The password the Adapter will use to authenticate API calls against Anchore itself. This is not a Harbor credential. | null |
