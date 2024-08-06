@@ -681,6 +681,12 @@ func nowISOFormat() string {
 
 func (s *HarborScannerAdapter) GetMetadata() (harbor.ScannerAdapterMetadata, error) {
 	adapterMeta := adapter.AdapterMetadata
+
+	// Disable RawReportMimeType if not enabled
+	if !s.Configuration.EnableRawMimeType {
+		adapterMeta.Capabilities[0].ProducesMIMETypes = []string{adapter.HarborVulnReportv1MimeType}
+	}
+
 	var err error
 	var feedsUpdated time.Time
 

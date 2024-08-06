@@ -28,6 +28,7 @@ type AdapterConfig struct {
 	AnchoreClientConfig           client.Config // Credentials and client configuration
 	CacheConfig                   CacheConfiguration
 	UseAnchoreConfiguredCreds     bool // If true, the adapter will ignore the dynamic credentials that are provided by harbor for each scan and will instead expect that the admin has configured Anchore with credentials out-of-band. Default is False.
+	EnableRawMimeType             bool // If true, the scanner adapter will not attempt produce the Raw Mime type. Default is False.
 }
 
 const (
@@ -56,6 +57,8 @@ const (
 	DefaultDescriptionCacheEnabled    = true
 	DefaultDescriptionCacheTTL        = 60 * 60 * 24
 	DefaultDescriptionCacheItemCount  = 10000
+	EnableRawMimeTypeEnvVarName       = "SCANNER_ADAPTER_ENABLE_RAW_MIME_TYPE"
+	EnableRawMimeTypeDefault          = true
 	ReportCacheEnabledEnvVarName      = "SCANNER_ADAPTER_REPORT_CACHE_ENABLED"
 	ReportCacheItemCount              = "SCANNER_ADAPTER_REPORT_CACHE_COUNT"
 	ReportCacheTTL                    = "SCANNER_ADAPTER_REPORT_CACHE_TTL"
@@ -298,6 +301,8 @@ func GetConfig() (AdapterConfig, error) {
 	}
 
 	cfg.UseAnchoreConfiguredCreds, _ = GetEnvBoolean(UseAnchoreConfigCredsEnvVarName, UseAnchoreConfigCredsDefault)
+
+	cfg.EnableRawMimeType, _ = GetEnvBoolean(EnableRawMimeTypeEnvVarName, EnableRawMimeTypeDefault)
 
 	return cfg, nil
 }
