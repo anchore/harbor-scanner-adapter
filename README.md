@@ -111,7 +111,7 @@ The configuration file must be json formatted and may contain all or some of the
 
 ### Requirements
 
-This adapter requires both a Harbor deployment and an Anchore Engine or Enterprise deployment to operate against. The adapter can be deployed before the Anchore installation,
+This adapter requires both a Harbor deployment and an Anchore Enterprise deployment to operate. The adapter can be deployed before the Anchore installation,
 but the endpoint url and credentials must be known to pass to the adapter.
 
 Install Harbor:
