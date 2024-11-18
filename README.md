@@ -111,76 +111,85 @@ The configuration file must be json formatted and may contain all or some of the
 
 ### Requirements
 
-This adapter requires an Anchore Engine or Enterprise deployment to operate against. The adapter can be deployed before the anchore installation,
+This adapter requires both a Harbor deployment and an Anchore Enterprise deployment to operate. The adapter can be deployed before the Anchore installation,
 but the endpoint url and credentials must be known to pass to the adapter.
 
-It is highly recommended to create a new account in the anchore deployment and a new user with credentials dedicated to the Harbor adapter.
-
-
-### Kubernetes
-
 Install Harbor:
-
 ```
 helm install --name harbor harbor/harbor
 ```
 
 Install Anchore Enterprise:
+[Installation docs](https://docs.anchore.com/current/docs/deployment/)
 
-```
-helm install --name anchore stable/anchore-engine -f enterprise_values.yaml
-```
+### Create Credentials
+
+It is highly recommended to create a new account in the Anchore deployment and a new user with credentials dedicated to the Harbor adapter. 
+When using Enterprise 5+, you can also utilize api keys. Learn how to generate them here - https://docs.anchore.com/current/docs/configuration/user_authentication/api_keys/#generating-api-keys
 
 Create a harbor account and user in Anchore for the adapter to use for authenticating calls to Anchore. 
 
 _This is not required, but recommended as it will limit the scope of the adapter's credentials within Anchore to a 
-non-admin account and keep all Harbor image data in one account for easy management. This step can be skipped for demo environments where the Anchore Engine deployment is not shared, but is strongly encouraged for all production use and all cases where
+non-admin account and keep all Harbor image data in one account for easy management. This step can be skipped for demo environments where the Anchore deployment is not shared, but is strongly encouraged for all production use and all cases where
 Harbor will be integrated with an existing Anchore deployment._
 
+For example with anchorectl, you could create a new account in Anchore, _harbor_ with a single user _harbor_ and password for this example (use a much stronger password in your install)
 ```
-ANCHORE_CLI_USER=admin
-ANCHORE_CLI_PASS=$(kubectl get secret --namespace default anchore-anchore-engine -o jsonpath="{.data.ANCHORE_ADMIN_PASSWORD}" | base64 --decode; echo)
-ANCHORE_CLI_URL=http://anchore-anchore-engine-api.default.svc.cluster.local:8228/v1/
-kubectl run -i --tty anchore-cli --restart=Always --image anchore/engine-cli  --env ANCHORE_CLI_USER=admin --env ANCHORE_CLI_PASS=${ANCHORE_CLI_PASS} --env ANCHORE_CLI_URL=http://anchore-anchore-engine-api.default.svc.cluster.local:8228/v1/
-```
-
-In the anchore-cli container running inside the cluster, now create a new account in Anchore, _harbor_ with a single user _harbor_ and password for this example (use a much stronger password in your install)
-
-```
-anchore-cli account add harbor
-anchore-cli account user add --account harbor harbor harboruserpass123
-
+anchorectl account add harbor
+anchorectl account user add --account harbor harbor harboruserpass123
 ```
 
-Install the adapter:
-
+Now you need to store the credentials in a secret for use by the adapter.
 If you created a custom user:
 ```
 kubectl create secret generic anchore-creds --from-literal=username=harbor --from-literal=password=harboruserpass123
 ```
-
-To use the default admin user/pass for a fresh test/dev install of anchore (DO NOT DO THIS FOR PRODUCTION!):
+You can use the default admin user/pass for a fresh test/dev install of Anchore (DO NOT DO THIS FOR PRODUCTION!):
 ```
 kubectl create secret generic anchore-creds --from-literal=username=admin --from-literal=password=foobar
 ```
+Please ensure the secret is stored in the same namespace as the deployed Harbor adapter.
 
+###  Install Adapter
+
+Take a copy of the yaml manifest and edit to your specific deployment requirements. If you created a secret for the username and password then these will be used.
 Install the adapter:
 ```
 kubectl apply -f ./k8s/harbor-adapter-anchore.yaml
 ```
 
+Please note: You can install multiple adapters and configure each of these to work differently. This would allow you to map each adapter/scanner instance to the desired project in Harbor.
+
+###  Configure Adapter
+
 Configure the scanner in Harbor:
 
-In the Harbor UI login as an admin and navigate to Configuration>Scanners and click "+ New Scanner".
+In the Harbor UI login as an admin and navigate to Administration->Interrogation Services->Scanners and click "+ New Scanner".
+In older versions of Harbor, this can be found under Configuration->Scanners.
 
-![Add Scanner UI](assets/scanner-config.png)
+![Add Scanner UI](assets/scanner-config-new.png)
 
-In 'Endpoint', type: "http://harbor-scanner-anchore:8080"
-
+In 'Endpoint', use the adapter hostname of your instance. The default is the following:
+```
+http://harbor-scanner-anchore:8080"
+```
 Leave authorization empty since in this example we did not set an API key in the adapter deployment environment.
 
 Click "Test Connection" and should work. 
-You can now click "Add" to complete the setup.
+You can now click "Add" to add the scanner
+
+Now for each project in Harbor, we must add and set the Anchore Scanner.
+In the Harbor UI, navigate to the project->scanner and click "Select Scanner". You might want to make Anchore the default scanner for a project.
+![Add Scanner to Project UI](assets/scanner-project-select.png)
+
+###  Test Scanning
+
+Navigate to a project and repository, then select an image and push the scan vulnerability button at the top of the page.
+
+Also under the Administration->Interrogation Services page you can perform bulk scans.
+
+Finally, under a Project goto the 'Configuration' page where you can 'scan images on push' and 'prevent vulnerable images from running'. 
+The last option will require you to enable 'Use internal registry address' so that Anchore can access the image in Harbor to scan it.
 
 ## Development
 
