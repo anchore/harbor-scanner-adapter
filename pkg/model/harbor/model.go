@@ -113,7 +113,7 @@ type VulnerableItem struct {
 	Version     string   `json:"version"`
 	Description string   `json:"description"`
 	Links       []string `json:"links"`
-	Fixed       string   `json:"fixed_version,omitempty"`
+	Fixed       string   `json:"fix_version,omitempty"`
 }
 
 // Metadata about the adapter itself
