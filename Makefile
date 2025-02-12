@@ -13,7 +13,7 @@ LINTCMD = $(TEMPDIR)/golangci-lint run --tests=false --timeout 5m --config .gola
 GOIMPORTS_CMD = $(TEMPDIR)/gosimports -local github.com/anchore
 
 # ci dependency versions
-GOLANG_CI_VERSION = v1.54.2
+GOLANG_CI_VERSION = v1.64.2
 GOSIMPORTS_VERSION = v0.3.8
 GORELEASER_VERSION = v1.16.1
 
