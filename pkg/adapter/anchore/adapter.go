@@ -464,7 +464,6 @@ func BuildHarborVulnerabilityReport(
 
 		// Pivot to a map for next call
 		for _, desc := range vulns {
-			desc := desc // Reassign desc to avoid closure issues
 			vulnDescriptionMap[desc.ID] = desc.Description
 
 			// Add to the cache
@@ -620,7 +619,6 @@ func ToHarborScanResult(
 	var ok bool
 
 	for i, v := range srs.Vulnerabilities {
-		v := v // Reassign v to avoid closure issues
 		sev = harbor.ToHarborSeverity(v.Severity)
 
 		if vulnDescriptions != nil {
