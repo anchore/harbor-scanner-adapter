@@ -121,7 +121,7 @@ func GetVulnerabilityDescriptions(clientConfiguration *Config, vulns *[]anchore.
 	for i := 0; i < count/CHUNKSIZE+1; i++ {
 		start, end := getVulnProcessingChunks(count, i, CHUNKSIZE)
 
-		vulnIds := make([]string, end-start)
+		vulnIDs := make([]string, end-start)
 		namespaces := make(map[string]bool)
 
 		if start < 0 || end > count+1 {
@@ -134,7 +134,7 @@ func GetVulnerabilityDescriptions(clientConfiguration *Config, vulns *[]anchore.
 		log.WithFields(log.Fields{"total": count, "start": start, "end": end, "size": len(chunkToProcess)}).
 			Trace("processing chunk of the vuln list")
 		for i, v := range chunkToProcess {
-			vulnIds[i] = v.ID
+			vulnIDs[i] = v.ID
 			namespaces[v.Namespace] = true
 		}
 
@@ -151,7 +151,7 @@ func GetVulnerabilityDescriptions(clientConfiguration *Config, vulns *[]anchore.
 
 		// Split the input array into map[string][]string where key is the Namespace
 		// Then query the system for a single Namespace and populate the result fields
-		qryResults, errs := QueryVulnerabilityRecords(clientConfiguration, vulnIds, namespaceNames)
+		qryResults, errs := QueryVulnerabilityRecords(clientConfiguration, vulnIDs, namespaceNames)
 		if errs != nil {
 			log.WithField("errs", errs).Debug("error getting vuln records")
 			return errs[0]
@@ -225,7 +225,7 @@ func QueryVulnerabilityRecords(
 	var vulnPage anchore.VulnerabilityQueryResults
 	var start, end, pageStart, pageEnd time.Time
 
-	vulnIdsStr := strings.Join(ids, ",")
+	vulnIDsStr := strings.Join(ids, ",")
 	namespaceStr := strings.Join(namespaces, ",")
 
 	request := getNewRequest(clientConfiguration)
@@ -240,7 +240,7 @@ func QueryVulnerabilityRecords(
 	for morePages {
 		pageStart = time.Now()
 
-		req := request.Get(reqURL).Param("id", vulnIdsStr).Param("namespace", namespaceStr)
+		req := request.Get(reqURL).Param("id", vulnIDsStr).Param("namespace", namespaceStr)
 		if page != "" {
 			req = req.Param("page", page)
 		}
