@@ -1,6 +1,6 @@
 module github.com/anchore/harbor-scanner-adapter
 
-go 1.24.0
+go 1.24
 
 require (
 	github.com/aws/aws-sdk-go v1.55.6
