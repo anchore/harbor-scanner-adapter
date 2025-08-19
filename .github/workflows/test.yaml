@@ -26,14 +26,14 @@ jobs:
 
       - name: Restore tool cache
         id: tool-cache
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 #v4.2.3
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 #v4.2.4
         with:
           path: ${{ github.workspace }}/.tmp
           key: ${{ runner.os }}-tool-${{ hashFiles('Makefile') }}
 
       - name: Restore go cache
         id: go-cache
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 #v4.2.3
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 #v4.2.4
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
@@ -61,14 +61,14 @@ jobs:
 
       - name: Restore tool cache
         id: tool-cache
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 #v4.2.3
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 #v4.2.4
         with:
           path: ${{ github.workspace }}/.tmp
           key: ${{ runner.os }}-tool-${{ hashFiles('Makefile') }}
 
       - name: Restore go cache
         id: go-cache
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 #v4.2.3
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 #v4.2.4
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
