@@ -28,6 +28,10 @@ func (c *AWSCredenitalLoader) LoadFromCredentialStore(passwordConfig string) str
 func getAWSSecret(configValue string) string {
 	// The expected format is aws:secretmanager:<region>:<secret name>:<secret key>
 	fields := strings.Split(configValue, ":")
+	if len(fields) != 5 || fields[0] != "aws" || fields[1] != "secretmanager" {
+		log.WithFields(log.Fields{"configValue": configValue}).Error("invalid AWS Secret Manager configuration format")
+		return ""
+	}
 	region, name, key := fields[2], fields[3], fields[4]
 
 	log.WithFields(log.Fields{"region": region, "name": name, "key": key}).Debug("pass in secret manager parameters")
