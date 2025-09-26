@@ -193,6 +193,7 @@ func (h *APIHandler) GetScanReport(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if err != nil {
+		log.WithField("err", err.Error()).Error("error getting scan report")
 		switch err.Error() {
 		case "scan failed":
 			log.Error("Scan failed")
@@ -212,6 +213,9 @@ func (h *APIHandler) GetScanReport(res http.ResponseWriter, req *http.Request) {
 			log.Info("valid scanId, but create scan not ready")
 			res.Header().Set("Location", req.URL.String())
 			SendErrorResponse(&res, "scan pending", http.StatusFound)
+		case "image not found":
+			log.Error("image not found")
+			SendErrorResponse(&res, "image not found", http.StatusNotFound)
 		default:
 			log.Error("unknown internal error")
 			SendErrorResponse(&res, err.Error(), http.StatusInternalServerError)

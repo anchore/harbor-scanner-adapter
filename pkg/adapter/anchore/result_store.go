@@ -48,6 +48,7 @@ type ResultStore interface {
 type VulnerabilityResult struct {
 	ScanID                string
 	ScanCreated           bool
+	AwaitingAnchoreAPI    bool
 	AnalysisComplete      bool
 	ReportBuildInProgress bool
 	IsComplete            bool
@@ -131,6 +132,7 @@ func (m *MemoryResultStore) RequestCreateScan(
 					ScanID:                scanID,
 					ScanCreated:           false,
 					AnalysisComplete:      false,
+					AwaitingAnchoreAPI:    false,
 					ReportBuildInProgress: false,
 					IsComplete:            true,
 					Result:                nil,
@@ -142,6 +144,7 @@ func (m *MemoryResultStore) RequestCreateScan(
 					ScanID:                scanID,
 					ScanCreated:           imageAdded,
 					AnalysisComplete:      false,
+					AwaitingAnchoreAPI:    false,
 					ReportBuildInProgress: false,
 					IsComplete:            false,
 					Result:                nil,
@@ -153,6 +156,7 @@ func (m *MemoryResultStore) RequestCreateScan(
 			ScanID:                scanID,
 			ScanCreated:           false,
 			AnalysisComplete:      false,
+			AwaitingAnchoreAPI:    false,
 			ReportBuildInProgress: false,
 			IsComplete:            false,
 			Result:                nil,
@@ -168,9 +172,13 @@ func (m *MemoryResultStore) RequestAnalysisStatus(
 	buildFn func() (bool, error),
 ) VulnerabilityResult {
 	existing, ok := m.PopResult(scanID)
-	if (!ok || existing.ScanCreated) && !existing.AnalysisComplete {
+	if (!ok || existing.ScanCreated) && !existing.AnalysisComplete && !existing.AwaitingAnchoreAPI {
 		// Result not found so begin the async fetch
 		go func() {
+			// Mark that we are awaiting the Anchore API so that we don't make multiple concurrent requests for the same scanID while one is in flight.
+			existing.AwaitingAnchoreAPI = true
+			m.SafeUpdateResult(scanID, existing)
+
 			complete, err := buildFn()
 			currentState, _ := m.GetResult(scanID)
 			if err != nil {
@@ -180,6 +188,7 @@ func (m *MemoryResultStore) RequestAnalysisStatus(
 					ScanID:                scanID,
 					ScanCreated:           true,
 					AnalysisComplete:      false,
+					AwaitingAnchoreAPI:    false,
 					ReportBuildInProgress: currentState.ReportBuildInProgress,
 					IsComplete:            true,
 					Result:                nil,
@@ -191,6 +200,7 @@ func (m *MemoryResultStore) RequestAnalysisStatus(
 					ScanID:                scanID,
 					ScanCreated:           true,
 					AnalysisComplete:      complete,
+					AwaitingAnchoreAPI:    false,
 					ReportBuildInProgress: currentState.ReportBuildInProgress,
 					IsComplete:            currentState.IsComplete,
 					Result:                currentState.Result,
@@ -223,6 +233,7 @@ func (m *MemoryResultStore) RequestResult(
 					ScanID:                scanID,
 					ScanCreated:           true,
 					AnalysisComplete:      true,
+					AwaitingAnchoreAPI:    false,
 					ReportBuildInProgress: true,
 					IsComplete:            true,
 					Result:                nil,
@@ -234,6 +245,7 @@ func (m *MemoryResultStore) RequestResult(
 					ScanID:                scanID,
 					ScanCreated:           true,
 					AnalysisComplete:      true,
+					AwaitingAnchoreAPI:    false,
 					ReportBuildInProgress: true,
 					IsComplete:            true,
 					Result:                result,
@@ -266,6 +278,7 @@ func (m *MemoryResultStore) RequestRawResult(
 					ScanID:                scanID,
 					ScanCreated:           true,
 					AnalysisComplete:      true,
+					AwaitingAnchoreAPI:    false,
 					ReportBuildInProgress: true,
 					IsComplete:            true,
 					Result:                nil,
@@ -277,6 +290,7 @@ func (m *MemoryResultStore) RequestRawResult(
 					ScanID:                scanID,
 					ScanCreated:           true,
 					AnalysisComplete:      true,
+					AwaitingAnchoreAPI:    false,
 					ReportBuildInProgress: true,
 					IsComplete:            true,
 					Result:                nil,

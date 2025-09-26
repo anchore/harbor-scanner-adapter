@@ -283,7 +283,24 @@ func (s *HarborScannerAdapter) GetHarborVulnerabilityReport(
 	}
 
 	if !result.AnalysisComplete {
-		log.WithFields(log.Fields{"scanId": scanID}).Debug("checking image analysis state in Anchore Enterprise")
+		log.WithFields(log.Fields{"scanId": scanID, "errors": result.Error}).Debug("checking image analysis state in Anchore Enterprise")
+		if result.Error != nil {
+			if result.Error.Error() == "image not found" || result.Error.Error() == "analysis failed" {
+				log.WithFields(log.Fields{"error": result.Error}).Error("image analysis failed or image not found in Anchore Enterprise")
+
+				// Mark the Raw result as errored too to fail fast
+				rawScanID := fmt.Sprintf("%s-raw", scanID)
+				rawResult, ok := resultStore.PopResult(rawScanID)
+				if ok {
+					log.WithFields(log.Fields{"scanId": scanID, "rawScanId": rawScanID}).Debug("marking raw result as errored since analysis failed or image not found")
+					rawResult.Error = result.Error
+					rawResult.IsComplete = true
+					resultStore.SafeUpdateResult(rawScanID, rawResult)
+				}
+
+				return nil, result.Error
+			}
+		}
 		imageAnalsisFn := func() (bool, error) {
 			return IsImageAnalysed(imageDigest, scanID, &s.Configuration.AnchoreClientConfig)
 		}
@@ -537,16 +554,22 @@ func (s *HarborScannerAdapter) GetRawVulnerabilityReport(scanID string) (harbor.
 	}
 
 	if !rawResult.AnalysisComplete {
-		log.WithFields(log.Fields{"scanId": scanID}).Debug("checking image analysis state in Anchore Enterprise")
+		log.WithFields(log.Fields{"scanId": rawScanID, "errors": result.Error}).Debug("checking image analysis state in Anchore Enterprise")
+		if rawResult.Error != nil {
+			if rawResult.Error.Error() == "image not found" || rawResult.Error.Error() == "analysis failed" {
+				log.WithFields(log.Fields{"error": rawResult.Error}).Error("image analysis failed or image not found in Anchore Enterprise")
+				return nil, result.Error
+			}
+		}
 		imageAnalsisFn := func() (bool, error) {
-			return IsImageAnalysed(digest, scanID, &s.Configuration.AnchoreClientConfig)
+			return IsImageAnalysed(digest, rawScanID, &s.Configuration.AnchoreClientConfig)
 		}
 		resultStore.RequestAnalysisStatus(rawScanID, imageAnalsisFn)
 		return nil, fmt.Errorf("result not ready")
 	}
 
 	if rawResult.ReportBuildInProgress {
-		log.WithFields(log.Fields{"scanId": scanID, "resultIsComplete": rawResult.IsComplete, "resultError": rawResult.Error}).
+		log.WithFields(log.Fields{"scanId": rawScanID, "resultIsComplete": rawResult.IsComplete, "resultError": rawResult.Error}).
 			Debug("checked result store for scan Id result")
 		if rawResult.IsComplete {
 			return rawResult.RawResult, rawResult.Error
@@ -555,10 +578,10 @@ func (s *HarborScannerAdapter) GetRawVulnerabilityReport(scanID string) (harbor.
 	}
 
 	rawReportFn := func() (*anchore.ImageVulnerabilityReport, error) {
-		log.WithFields(log.Fields{"repository": repository, "imageDigest": digest, "scanId": scanID}).
+		log.WithFields(log.Fields{"repository": repository, "imageDigest": digest, "scanId": rawScanID}).
 			Info("Getting raw Anchore-formatted vulnerability report")
 		rep, err := GetAnchoreVulnReport(
-			scanID,
+			rawScanID,
 			digest,
 			&s.Configuration.AnchoreClientConfig,
 			s.Configuration.FullVulnerabilityDescriptions,

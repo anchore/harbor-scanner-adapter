@@ -393,7 +393,7 @@ func GetImage(clientConfiguration *Config, digest string, retryCount int) (ancho
 			return GetImage(clientConfiguration, digest, retryCount+1)
 		}
 
-		return image, fmt.Errorf("not found")
+		return image, fmt.Errorf("image not found")
 	}
 
 	if apiVersion == "v1" {
