@@ -23,7 +23,7 @@ spec:
             - name: SCANNER_ADAPTER_LISTEN_ADDR
               value: ":8080"
             - name: ANCHORE_ENDPOINT
-              value: "http://192.168.49.13:8228"
+              value: "http://host.docker.internal:8228"
             - name: ANCHORE_USERNAME
               valueFrom:
                 secretKeyRef:
