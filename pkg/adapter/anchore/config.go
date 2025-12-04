@@ -94,10 +94,10 @@ func GetEnvBoolean(varName string, defaultValue bool) (bool, error) {
 	if value, ok := os.LookupEnv(varName); ok {
 		value = strings.ToLower(value) // Normalize
 
-		switch {
-		case value == "true" || value == "y" || value == "yes":
+		switch value {
+		case "true", "y", "yes":
 			return true, nil
-		case value == "false" || value == "n" || value == "no":
+		case "false", "n", "no":
 			return false, nil
 		default:
 			log.WithFields(log.Fields{"value": value, "key": varName, "type": "bool"}).
