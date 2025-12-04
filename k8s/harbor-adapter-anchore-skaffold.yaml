@@ -23,7 +23,7 @@ spec:
             - name: SCANNER_ADAPTER_LISTEN_ADDR
               value: ":8080"
             - name: ANCHORE_ENDPOINT
-              value: "http://host.docker.internal:8228"
+              value: "http://192.168.49.13:8228"
             - name: ANCHORE_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -43,7 +43,7 @@ spec:
             - name: SCANNER_ADAPTER_REGISTRY_TLS_VERIFY
               value: "false"
             - name: SCANNER_ADAPTER_IGNORE_HARBOR_CREDS
-              value: "false"
+              value: "true"
 # To enable api authentication, uncomment this and set it to a good randomized value. Use that same value in the scanner config in Harbor UI with "Bearer" type
 #            - name: "SCANNER_ADAPTER_APIKEY"
 #              value: "apikey123"
