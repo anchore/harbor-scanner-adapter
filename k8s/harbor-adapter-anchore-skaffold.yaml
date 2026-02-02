@@ -23,7 +23,8 @@ spec:
             - name: SCANNER_ADAPTER_LISTEN_ADDR
               value: ":8080"
             - name: ANCHORE_ENDPOINT
-              value: "http://host.docker.internal:8228"
+              # Use host.minikube.internal for minikube, host.docker.internal for Docker Desktop
+              value: "http://host.minikube.internal:8228"
             - name: ANCHORE_USERNAME
               valueFrom:
                 secretKeyRef:
