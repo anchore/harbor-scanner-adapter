@@ -1,4 +1,4 @@
-FROM alpine:3.23.0
+FROM alpine:3.23.3
 
 ARG COMMIT
 
