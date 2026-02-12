@@ -1,0 +1,37 @@
+# Harbor Scanner Adapter for Anchore
+
+This repository contains a Harbor Scanner Adapter that translates the Harbor scanning API into the Anchore API, allowing Harbor to utilize Anchore Enterprise for vulnerability scanning of container images.
+
+## Project Structure
+
+- `cmd/anchore-adapter/` - Main application entry point
+- `pkg/adapter/` - Core adapter logic and Anchore client implementation
+- `pkg/http/api/v1/` - HTTP API handlers for Harbor integration
+- `pkg/model/` - Data models for Harbor and Anchore APIs
+- `k8s/` - Kubernetes deployment manifests
+- `assets/` - Documentation images and diagrams
+
+## Key Components
+
+- **Adapter Service**: Translates between Harbor and Anchore APIs
+- **Anchore Client**: Handles authentication and communication with Anchore services
+- **Caching Layer**: Improves performance by caching vulnerability descriptions and reports
+- **Result Store**: Manages asynchronous scan results
+- **Credential Management**: Supports multiple credential sources including AWS Secrets Manager
+
+## Configuration
+
+The adapter is configured via environment variables or JSON configuration file:
+- Anchore API endpoint and authentication
+- Harbor integration settings
+- Caching configuration
+- TLS/security settings
+
+## Technology Stack
+
+- **Language**: Go 1.24
+- **HTTP Framework**: Gorilla Mux
+- **Logging**: Logrus
+- **Cloud Integration**: AWS SDK v2
+- **Testing**: Testify
+- **Deployment**: Kubernetes, Docker
