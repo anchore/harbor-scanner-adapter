@@ -9,6 +9,9 @@ on:
       - v1.*
       - v2.*
 
+permissions:
+  contents: read
+
 env:
   GO_VERSION: "1.25.7"
 
@@ -18,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          persist-credentials: false
       # we don't want to release commits that have been pushed and tagged, but not necessarily merged onto main
       - name: Ensure tagged commit is on main
         run: |
@@ -46,21 +51,31 @@ jobs:
       - name: Quality gate
         if: steps.unit.outputs.conclusion != 'success' || steps.container.outputs.conclusion != 'success'
         run: |
-          echo "Unit Test Status: ${{ steps.unit.outputs.conclusion }}"
-          echo "Integration Test Status: ${{ steps.container.outputs.conclusion }}"
+          echo "Unit Test Status: ${STEPS_UNIT_OUTPUTS_CONCLUSION}"
+          echo "Integration Test Status: ${STEPS_CONTAINER_OUTPUTS_CONCLUSION}"
           false
+        env:
+          STEPS_UNIT_OUTPUTS_CONCLUSION: ${{ steps.unit.outputs.conclusion }}
+          STEPS_CONTAINER_OUTPUTS_CONCLUSION: ${{ steps.container.outputs.conclusion }}
 
   release:
     needs: [quality-gate]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      # required for goreleaser signs section with cosign
+      id-token: write
     steps:
       - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 #v6.2.0
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache: false
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Restore tool cache
         id: tool-cache
@@ -68,6 +83,7 @@ jobs:
         with:
           path: ${{ github.workspace }}/.tmp
           key: ${{ runner.os }}-tool-${{ hashFiles('Makefile') }}
+          lookup-only: true
 
       - name: Restore go cache
         id: go-cache
@@ -77,6 +93,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-${{ env.GO_VERSION }}-
+          lookup-only: true
 
       - name: Install tools
         run: make bootstrap-tools
