@@ -3,6 +3,9 @@ env:
 before:
   hooks:
     - go mod tidy
+release:
+  # Tags with a semver prerelease suffix (e.g. v1.6.0-rc0) are marked as prereleases.
+  prerelease: auto
 builds:
   - id: build-anchore-adapter
     main: ./cmd/anchore-adapter/main.go
@@ -29,12 +32,17 @@ changelog:
       - '^test:'
       - '^chore:'
 dockers:
-  - id: image
+  # Per-arch building-block images. The Dockerfile is RUN-free (distroless COPY-only),
+  # so buildx assembles the arm64 image on an amd64 host without QEMU.
+  - id: image-amd64
     image_templates:
-      - "{{.Env.IMAGE_REPOSITORY}}:{{ .Version }}"
+      - "{{.Env.IMAGE_REPOSITORY}}:{{ .Tag }}-amd64"
+    use: buildx
     goos: linux
     goarch: amd64
     build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--provenance=false"
       - "--label=org.label-schema.schema-version=1.0"
       - "--label=org.label-schema.name={{ .ProjectName }}"
       - "--label=org.label-schema.description=Harbor scanner adapter for Anchore"
@@ -43,3 +51,28 @@ dockers:
       - "--label=org.label-schema.build-date={{ .Date }}"
       - "--label=org.label-schema.vcs-ref={{ .FullCommit }}"
       - "--label=org.label-schema.vcs=https://github.com/anchore/harbor-scanner-adapter"
+  - id: image-arm64
+    image_templates:
+      - "{{.Env.IMAGE_REPOSITORY}}:{{ .Tag }}-arm64v8"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--provenance=false"
+      - "--label=org.label-schema.schema-version=1.0"
+      - "--label=org.label-schema.name={{ .ProjectName }}"
+      - "--label=org.label-schema.description=Harbor scanner adapter for Anchore"
+      - "--label=org.label-schema.vendor=Anchore"
+      - "--label=org.label-schema.version={{ .Version }}"
+      - "--label=org.label-schema.build-date={{ .Date }}"
+      - "--label=org.label-schema.vcs-ref={{ .FullCommit }}"
+      - "--label=org.label-schema.vcs=https://github.com/anchore/harbor-scanner-adapter"
+
+docker_manifests:
+  # v-prefixed multi-arch (amd64 + arm64) release tag, matching the other Anchore integrations.
+  # The tag mirrors the git tag exactly (e.g. v1.6.0, v1.6.0-rc0) — the customer-pulled tag.
+  - name_template: "{{.Env.IMAGE_REPOSITORY}}:{{ .Tag }}"
+    image_templates:
+      - "{{.Env.IMAGE_REPOSITORY}}:{{ .Tag }}-amd64"
+      - "{{.Env.IMAGE_REPOSITORY}}:{{ .Tag }}-arm64v8"
