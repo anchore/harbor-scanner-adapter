@@ -177,8 +177,14 @@ func (h *APIHandler) GetScanReport(res http.ResponseWriter, req *http.Request) {
 	case numTypes == 0, requestedTypes[0] == AllMimeTypes, requestedTypes[0] == "":
 		// Default if no Accept set or set to */* then return the harbor report
 		requestedType = HarborVulnReportv1MimeType
-	case requestedTypes[0] == HarborVulnReportv1MimeType, requestedTypes[0] == RawVulnReportMimeType:
+	case requestedTypes[0] == HarborVulnReportv1MimeType:
 		requestedType = requestedTypes[0]
+	case requestedTypes[0] == RawVulnReportMimeType:
+		// ponytail: only serve raw when enabled; otherwise leave requestedType
+		// empty so it falls through to the 400 below, matching GetMetadata's gating.
+		if h.config.EnableRawMimeType {
+			requestedType = requestedTypes[0]
+		}
 	}
 
 	switch requestedType {

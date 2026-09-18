@@ -137,8 +137,42 @@ func TestGetRawScanReport(t *testing.T) {
 	t.Skip()
 }
 
+// TestGetScanReport guards ENTERPRISE-8767 finding 2: a raw-format request must be
+// rejected (400) when EnableRawMimeType is off, and served when it's on.
+// ponytail: one test for the behavior we changed, not five speculative stubs. The
+// remaining skipped stubs below stay tracked by ENTERPRISE-8767 finding 3.
 func TestGetScanReport(t *testing.T) {
-	t.Skip()
+	cases := []struct {
+		name       string
+		rawEnabled bool
+		accept     string
+		wantStatus int
+	}{
+		{"raw rejected when disabled", false, RawVulnReportMimeType, http.StatusBadRequest},
+		{"raw served when enabled", true, RawVulnReportMimeType, http.StatusOK},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := okConfig
+			cfg.EnableRawMimeType = tc.rawEnabled
+			handler := APIHandler{scanner: NewMockAdapter(), config: cfg}
+
+			req, err := http.NewRequest("GET", "/api/v1/scan/abc/report", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set(AcceptHeader, tc.accept)
+
+			rr := httptest.NewRecorder()
+			http.HandlerFunc(handler.GetScanReport).ServeHTTP(rr, req)
+
+			if rr.Code != tc.wantStatus {
+				t.Errorf("Accept=%s rawEnabled=%v: got status %d, want %d (body: %s)",
+					tc.accept, tc.rawEnabled, rr.Code, tc.wantStatus, rr.Body.String())
+			}
+		})
+	}
 }
 
 func TestAuthenticationMiddleware(t *testing.T) {
