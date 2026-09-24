@@ -132,3 +132,32 @@ jobs:
           GORELEASER_CURRENT_TAG: ${{ steps.release-tags.outputs.current }}
           # Empty is safe: goreleaser falls back to auto-detection.
           GORELEASER_PREVIOUS_TAG: ${{ steps.release-tags.outputs.previous }}
+
+  # RC only: once the RC image is built + published above, kick off the
+  # downstream CircleCI e2e pipeline. GA tags skip this (a GA is only cut after
+  # e2e passes). Called as a reusable workflow rather than reacting to
+  # release.prereleased: goreleaser publishes with a token, and a release-event
+  # reaction is unreliable, so run it inside this tag-push run. promote=true
+  # because this is the automatic pipeline path (a successful e2e drives the GA).
+  trigger-e2e:
+    needs: [release]
+    if: ${{ contains(github.ref_name, '-rc') }}
+    uses: $/.github/workflows/trigger-circleci-e2e.yaml
+    with:
+      tag: ${{ github.ref_name }}
+      promote: true
+    secrets: inherit # zizmor: ignore[secrets-inherit] required to reach the e2e env secrets from the reusable workflow
+
+  # Alert Slack if any step of the build/publish/trigger chain fails. Covers RC
+  # and GA runs (trigger-e2e is skipped on GA — a skipped need is not a failure,
+  # so this stays quiet on a clean GA). e2e failures are alerted separately from
+  # CircleCI; this is the GitHub Actions half. github.ref_name is the tag here.
+  notify-failure:
+    needs: [quality-gate, release, trigger-e2e]
+    if: ${{ failure() }}
+    uses: $/.github/workflows/notify-slack-failure.yaml
+    with:
+      subject: ${{ github.ref_name }}
+    secrets:
+      # left name = the reusable workflow's generic input; right = the actual repo/org secret.
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_ANCHORE_INTEGRATION_RELEASE_ALERTS }}
