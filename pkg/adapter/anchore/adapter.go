@@ -584,7 +584,7 @@ func (s *HarborScannerAdapter) GetRawVulnerabilityReport(scanID string) (harbor.
 			rawScanID,
 			digest,
 			&s.Configuration.AnchoreClientConfig,
-			s.Configuration.FullVulnerabilityDescriptions,
+			s.Configuration.FilterVendorIgnoredVulns,
 		)
 		if err != nil {
 			return nil, err
