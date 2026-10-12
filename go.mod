@@ -1,6 +1,6 @@
 module github.com/anchore/harbor-scanner-adapter
 
-go 1.26.8
+go 1.26.9
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.47.1
@@ -31,6 +31,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/net v0.56.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
 )
