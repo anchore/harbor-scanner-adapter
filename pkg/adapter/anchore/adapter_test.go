@@ -55,6 +55,18 @@ func TestGetUsernamePassword(t *testing.T) {
 			t.Error("Did not decode expected foo:bar result: ", usr, " : ", pass)
 		}
 	}
+
+	noColonValues := []string{
+		fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString([]byte("foobar"))),
+		base64.StdEncoding.EncodeToString([]byte("foobar")),
+		" ",
+	}
+
+	for _, header := range noColonValues {
+		if _, _, err := GetUsernamePassword(header); err == nil {
+			t.Error("Expected an error for an authorization value with no colon: ", header)
+		}
+	}
 }
 
 func TestScanIdToRegistryDigest(t *testing.T) {
