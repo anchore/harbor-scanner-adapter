@@ -1,8 +1,8 @@
 ########## Builder ##########
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 # Install the latest version of Delve
-RUN go install github.com/go-delve/delve/cmd/dlv@v1.22.1
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.27.2
 
 ENV APP_PATH=/go/src/github.com/anchore/harbor-scanner-adapter
 
