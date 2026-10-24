@@ -125,6 +125,9 @@ func GetUsernamePassword(authorizationInput string) (string, string, error) {
 		return "", "", err
 	}
 	parts := strings.SplitN(string(decoded), ":", 2)
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("authorization value is not a colon-separated username and password")
+	}
 	return parts[0], parts[1], nil
 }
 
