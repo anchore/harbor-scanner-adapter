@@ -3,7 +3,7 @@ module github.com/anchore/harbor-scanner-adapter
 go 1.26.10
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.47.3
+	github.com/aws/aws-sdk-go-v2 v1.47.4
 	github.com/aws/aws-sdk-go-v2/config v1.33.9
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.50.5
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
@@ -25,7 +25,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.38.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.43.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.4 // indirect
-	github.com/aws/smithy-go v1.28.5 // indirect
+	github.com/aws/smithy-go v1.28.6 // indirect
 	github.com/elazarl/goproxy v0.0.0-20230731152917-f99041a5c027 // indirect
 	github.com/moul/http2curl v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
