@@ -25,6 +25,12 @@ linters:
     - unused
     - whitespace
   settings:
+    goconst:
+      # Structured-log field keys repeat by design across log.WithFields(log.Fields{...})
+      # call sites. Hoisting them into constants would risk silently renaming a field that
+      # downstream log consumers key on, for no readability gain.
+      ignore-string-values:
+        - '^(scanId|imageDigest|repository|imageState|resultError|resultIsComplete|UseAnchoreConfiguredCredentials|statusCode|status|method|digest|body|error|err|key|value|type|int|url)$'
     funlen:
       lines: 70
       statements: 50
