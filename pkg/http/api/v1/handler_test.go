@@ -139,8 +139,7 @@ func TestGetRawScanReport(t *testing.T) {
 
 // TestGetScanReport guards ENTERPRISE-8767 finding 2: a raw-format request must be
 // rejected (400) when EnableRawMimeType is off, and served when it's on.
-// ponytail: one test for the behavior we changed, not five speculative stubs. The
-// remaining skipped stubs below stay tracked by ENTERPRISE-8767 finding 3.
+// The remaining skipped stubs below stay tracked by ENTERPRISE-8767 finding 3.
 func TestGetScanReport(t *testing.T) {
 	cases := []struct {
 		name       string
