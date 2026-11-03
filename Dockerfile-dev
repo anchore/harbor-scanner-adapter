@@ -1,5 +1,5 @@
 ########## Builder ##########
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 # Install the latest version of Delve
 RUN go install github.com/go-delve/delve/cmd/dlv@v1.27.2
